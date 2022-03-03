@@ -23,26 +23,26 @@ namespace Pspg
    * FieldState for fields in symmetry-adapted basis format.
    */
    template <int D>
-   class BasisFieldState : public FieldState<D, RDField<D> >
+   class RGridFieldState : public FieldState<D, RDField<D> >
    {
    public:
 
       /**
       * Default constructor.
       */
-      BasisFieldState();
+      RGridFieldState();
 
       /**
       * Constructor, create association with a parent system.
       *
       * \param system associated parent system
       */
-      BasisFieldState(System<D>& system);
+      RGridFieldState(System<D>& system);
 
       /**
       * Destructor.
       */
-      ~BasisFieldState();
+      ~RGridFieldState();
 
       /**
       * Allocate all fields.
@@ -91,9 +91,9 @@ namespace Pspg
 
    #ifndef PSPG_BASIS_FIELD_STATE_TPP
    // Suppress implicit instantiation
-   extern template class BasisFieldState<1>;
-   extern template class BasisFieldState<2>;
-   extern template class BasisFieldState<3>;
+   extern template class RGridFieldState<1>;
+   extern template class RGridFieldState<2>;
+   extern template class RGridFieldState<3>;
    #endif
 
 } // namespace Pspg

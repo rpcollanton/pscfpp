@@ -26,7 +26,7 @@ namespace Pspg {
    */
    template <int D>
    Sweep<D>::Sweep() 
-    : SweepTmpl< BasisFieldState<D> >(PSPG_HISTORY_CAPACITY),
+    : SweepTmpl< RGridFieldState<D> >(PSPG_HISTORY_CAPACITY),
       systemPtr_(0)
    {}
 
@@ -35,7 +35,7 @@ namespace Pspg {
    */
    template <int D>
    Sweep<D>::Sweep(System<D> & system) 
-    : SweepTmpl< BasisFieldState<D> >(PSPG_HISTORY_CAPACITY),
+    : SweepTmpl< RGridFieldState<D> >(PSPG_HISTORY_CAPACITY),
       systemPtr_(&system)
    {}
 
@@ -57,7 +57,7 @@ namespace Pspg {
    * Check allocation of one state object, allocate if necessary.
    */
    template <int D>
-   void Sweep<D>::checkAllocation(BasisFieldState<D>& state) 
+   void Sweep<D>::checkAllocation(RGridFieldState<D>& state) 
    { 
       UTIL_CHECK(hasSystem()); 
       state.setSystem(system());

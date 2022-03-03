@@ -9,7 +9,7 @@
 */
 
 #include <pscf/sweep/SweepTmpl.h>          // base class template
-#include <pspg/sweep/BasisFieldState.h>    // base class template parameter
+#include <pspg/sweep/RGridFieldState.h>    // base class template parameter
 #include "SweepParameter.h" // parameter class
 #include <util/global.h>
 
@@ -22,7 +22,7 @@ namespace Pspg {
    * Solve a sequence of problems along a line in parameter space.
    */
    template <int D>
-   class Sweep : public SweepTmpl< BasisFieldState<D> >
+   class Sweep : public SweepTmpl< RGridFieldState<D> >
    {
 
    public:
@@ -48,12 +48,12 @@ namespace Pspg {
       void setSystem(System<D>& system);
 
       // Public members inherited from base class template SweepTmpl
-      using SweepTmpl< BasisFieldState<D> >::historyCapacity;
-      using SweepTmpl< BasisFieldState<D> >::historySize;
-      using SweepTmpl< BasisFieldState<D> >::nAccept;
-      using SweepTmpl< BasisFieldState<D> >::state;
-      using SweepTmpl< BasisFieldState<D> >::s;
-      using SweepTmpl< BasisFieldState<D> >::c;
+      using SweepTmpl< RGridFieldState<D> >::historyCapacity;
+      using SweepTmpl< RGridFieldState<D> >::historySize;
+      using SweepTmpl< RGridFieldState<D> >::nAccept;
+      using SweepTmpl< RGridFieldState<D> >::state;
+      using SweepTmpl< RGridFieldState<D> >::s;
+      using SweepTmpl< RGridFieldState<D> >::c;
 
    protected:
 
@@ -62,7 +62,7 @@ namespace Pspg {
       *
       * \param state object that represents a stored state of the system.
       */
-      virtual void checkAllocation(BasisFieldState<D>& state);
+      virtual void checkAllocation(RGridFieldState<D>& state);
 
       /**
       * Setup operation at the beginning of a sweep.
@@ -125,15 +125,15 @@ namespace Pspg {
       {  return *systemPtr_; }
 
       // Protected members inherited from base class template SweepTmpl
-      using SweepTmpl< BasisFieldState<D> >::ns_;
-      using SweepTmpl< BasisFieldState<D> >::baseFileName_;
-      using SweepTmpl< BasisFieldState<D> >::initialize;
-      using SweepTmpl< BasisFieldState<D> >::setCoefficients;
+      using SweepTmpl< RGridFieldState<D> >::ns_;
+      using SweepTmpl< RGridFieldState<D> >::baseFileName_;
+      using SweepTmpl< RGridFieldState<D> >::initialize;
+      using SweepTmpl< RGridFieldState<D> >::setCoefficients;
 
    private:
 
       /// Trial state (produced by continuation in setGuess)
-      BasisFieldState<D> trial_;
+      RGridFieldState<D> trial_;
 
       /// Unit cell parameters for trial state 
       FSArray<double, 6> unitCellParameters_;
