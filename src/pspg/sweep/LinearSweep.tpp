@@ -1,5 +1,5 @@
-#ifndef PSPC_LINEAR_SWEEP_TPP
-#define PSPC_LINEAR_SWEEP_TPP
+#ifndef PSPG_LINEAR_SWEEP_TPP
+#define PSPG_LINEAR_SWEEP_TPP
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -9,11 +9,11 @@
 */
 
 #include "LinearSweep.h"
-#include <pspc/System.h>
+#include <pspg/System.h>
 #include <cstdio>
 
 namespace Pscf {
-namespace Pspc {
+namespace Pspg {
 
    using namespace Util;
 

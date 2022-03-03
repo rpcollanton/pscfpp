@@ -1,5 +1,5 @@
-#ifndef PSPC_BASIS_FIELD_STATE_TPP
-#define PSPC_BASIS_FIELD_STATE_TPP
+#ifndef PSPG_BASIS_FIELD_STATE_TPP
+#define PSPG_BASIS_FIELD_STATE_TPP
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -13,7 +13,7 @@
 #include <util/global.h>
 
 namespace Pscf {
-namespace Pspc
+namespace Pspg
 {
 
    using namespace Util;
@@ -23,7 +23,7 @@ namespace Pspc
    */
    template <int D>
    BasisFieldState<D>::BasisFieldState()
-    : FieldState<D, DArray<double> >()
+    : FieldState<D, RDField<D> >()
    {}
   
    /*
@@ -31,7 +31,7 @@ namespace Pspc
    */
    template <int D>
    BasisFieldState<D>::BasisFieldState(System<D>& system)
-    : FieldState<D, DArray<double> >(system)
+    : FieldState<D, RDField<D> >(system)
    {}
 
    /*
@@ -58,16 +58,15 @@ namespace Pspc
          fields().allocate(nMonomer);
       }
 
-      int nBasis = system().basis().nBasis();
-      UTIL_CHECK(nBasis > 0);
+      int nMesh = system().mesh().size();
+      UTIL_CHECK(nMesh > 0);
       for (int i = 0; i < nMonomer; ++i) {
          if (field(i).isAllocated()) {
-            UTIL_CHECK(field(i).capacity() == nBasis);
+            UTIL_CHECK(field(i).capacity() == nMesh);
          } else {
-            field(i).allocate(nBasis);
+            field(i).allocate(nMesh);
          }
       }
-
    }
  
    /**
@@ -77,7 +76,7 @@ namespace Pspc
    void BasisFieldState<D>::read(const std::string & filename)
    {
       allocate();
-      system().fieldIo().readFieldsBasis(filename, fields(), unitCell());
+      system().fieldIo().readFieldsBasis(filename, fields());
    }
 
    /**
@@ -100,14 +99,18 @@ namespace Pspc
       // Get system wFields
       allocate();
       int nMonomer = system().mixture().nMonomer();
-      int nBasis    = system().basis().nBasis();
+      int nMesh    = system().mesh().size();
+
+      // GPU Resources
+      int nBlocks, nThreads;
+      ThreadGrid::setThreadsLogical(nMesh, nBlocks, nThreads);
+
       int i, j;
       for (i = 0; i < nMonomer; ++i) {
-         DArray<double>& stateField = field(i);
-         const DArray<double>& systemField = system().wField(i);
-         for (j = 0; j < nBasis; ++j) {
-            stateField[j] = systemField[j];
-         }
+         RDField<D>& stateField = field(i);
+         const RDField<D>& systemField = system().wFieldRGrid(i);
+         assignReal<<<nBlocks, nThreads>>>
+               (stateField.cDField(), systemField.cDField(), nMesh);
       }
 
    }
@@ -118,25 +121,7 @@ namespace Pspc
    template <int D>
    void BasisFieldState<D>::setSystemState(bool isFlexible)
    {
-      system().setWBasis(fields());
-
-      #if 0
-      // Update system  wFields
-      int nMonomer = system().mixture().nMonomer();
-      int nBasis = system().basis().nBasis();
-      int i, j;
-      for (i = 0; i < nMonomer; ++i) {
-         const DArray<double>& stateField = field(i);
-         DArray<double>& systemField = system().wField(i);
-         for (j = 0; j < nBasis; ++j) {
-            systemField[j] = stateField[j];
-         }
-      }
-
-      // Update system wFieldsRgrid
-      system().fieldIo().convertBasisToRGrid(system().wFields(),
-                                             system().wFieldsRGrid());
-      #endif
+      system().setWRGrid(fields());
 
       if (isFlexible) {
          system().setUnitCell(unitCell());
@@ -144,6 +129,6 @@ namespace Pspc
 
    }
 
-} // namespace Pspc
+} // namespace Pspg
 } // namespace Pscf
 #endif

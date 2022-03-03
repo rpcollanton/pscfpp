@@ -1,5 +1,5 @@
-#ifndef PSPC_LINEAR_SWEEP_H
-#define PSPC_LINEAR_SWEEP_H
+#ifndef PSPG_LINEAR_SWEEP_H
+#define PSPG_LINEAR_SWEEP_H
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -14,7 +14,7 @@
 #include <iostream>
 
 namespace Pscf {
-namespace Pspc {
+namespace Pspg {
 
    template <int D> class System;
 
@@ -24,7 +24,7 @@ namespace Pspc {
    * Base class for a sweep in parameter space where parameters change
    * linearly with the sweep variable. 
    * 
-   * \ingroup Pspc_Sweep_Module
+   * \ingroup Pspg_Sweep_Module
    */
    template <int D>
    class LinearSweep : public Sweep<D>
@@ -79,7 +79,7 @@ namespace Pspc {
        
    };
 
-   #ifndef PSPC_LINEAR_SWEEP_TPP
+   #ifndef PSPG_LINEAR_SWEEP_TPP
    // Suppress implicit instantiation
    extern template class LinearSweep<1>;
    extern template class LinearSweep<2>;

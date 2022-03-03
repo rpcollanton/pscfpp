@@ -297,9 +297,6 @@ namespace Pspg{
       int nBlocks, nThreads;
       ThreadGrid::setThreadsLogical(nMesh, nBlocks, nThreads);
 
-      // pointer to field objects in system
-      DArray<RDField<D>> * sysfields = &system().wFieldsRGrid();
-
       // Manually and explicitly set homogeneous components of field if canonical
       if (system().mixture().isCanonical()) {
          cudaReal average, wAverage, cAverage;
@@ -324,7 +321,7 @@ namespace Pspg{
       // copy over grid points
       for (int i = 0; i < nMonomer; i++) {
          assignReal<<<nBlocks, nThreads>>>
-               ((*sysfields)[i].cDField(), newGuess.cDField() + i*nMesh, nMesh);
+               (system().wFieldRGrid(i).cDField(), newGuess.cDField() + i*nMesh, nMesh);
       }
 
       // if flexible unit cell, update parameters well
@@ -338,9 +335,7 @@ namespace Pspg{
             parameters.append(1/scaleStress_ * (double)temp[i]);
          }
 
-         system().unitCell().setParameters(parameters);            
-         system().mixture().setupUnitCell(system().unitCell(), system().wavelist());
-         system().wavelist().computedKSq(system().unitCell());
+         system().setUnitCell(parameters);
 
          delete[] temp;
       }

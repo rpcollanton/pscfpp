@@ -175,14 +175,14 @@ namespace Pspc
       void setWRGrid(DArray<WField> const & fields);
  
       /**
-      * Set parameters of the associated unit cell.
+      * Set an association to a new unit cell.
       *
       * \param unitCell  new UnitCell<D> (i.e., new parameters)
       */
       void setUnitCell(UnitCell<D> const & unitCell);
 
       /**
-      * Set parameters of the associated unit cell.
+      * Set new parameters of the associated unit cell.
       *
       * \param parameters  array of new unit cell parameters.
       */

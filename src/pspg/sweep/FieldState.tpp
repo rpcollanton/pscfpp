@@ -1,5 +1,5 @@
-#ifndef PSPC_FIELD_STATE_TPP
-#define PSPC_FIELD_STATE_TPP
+#ifndef PSPG_FIELD_STATE_TPP
+#define PSPG_FIELD_STATE_TPP
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -10,8 +10,8 @@
 
 #include "FieldState.h"
 
-#include <pspc/System.h>                   
-#include <pspc/field/FFT.h>                
+#include <pspg/System.h>                   
+#include <pspg/field/FFT.h>                
 #include <pscf/mesh/Mesh.h>                
 #include <pscf/crystal/Basis.h>           
 #include <util/misc/FileMaster.h>       
@@ -21,7 +21,7 @@
 // #include <util/format/Dbl.h>
 
 namespace Pscf {
-namespace Pspc
+namespace Pspg
 {
 
    using namespace Util;
@@ -66,6 +66,6 @@ namespace Pspc
       }
    }
 
-} // namespace Pspc
+} // namespace Pspg
 } // namespace Pscf
 #endif

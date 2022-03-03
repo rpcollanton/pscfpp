@@ -1,5 +1,5 @@
-#ifndef PSPC_SWEEP_PARAMETER_TPP
-#define PSPC_SWEEP_PARAMETER_TPP
+#ifndef PSPG_SWEEP_PARAMETER_TPP
+#define PSPG_SWEEP_PARAMETER_TPP
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -8,17 +8,17 @@
 * Distributed under the terms of the GNU General Public License.
 */
 
-#include <pspc/solvers/Block.h>
-#include <pspc/solvers/Mixture.h>
-#include <pspc/solvers/Polymer.h>
-#include <pspc/System.h>
+#include <pspg/solvers/Block.h>
+#include <pspg/solvers/Mixture.h>
+#include <pspg/solvers/Polymer.h>
+#include <pspg/System.h>
 #include <pscf/inter/ChiInteraction.h>
 #include <util/global.h>
 #include <algorithm>
 #include <iomanip>
 
 namespace Pscf {
-namespace Pspc {
+namespace Pspg {
 
    using namespace Util;
 

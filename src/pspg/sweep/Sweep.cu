@@ -5,15 +5,15 @@
 * Distributed under the terms of the GNU General Public License.
 */
 
-#include "BasisFieldState.tpp"
+#include "Sweep.tpp"
 
 namespace Pscf {
-namespace Pspc
+namespace Pspg
 {
 
-   template class BasisFieldState<1>;
-   template class BasisFieldState<2>;
-   template class BasisFieldState<3>;
+   template class Sweep<1>;
+   template class Sweep<2>;
+   template class Sweep<3>;
 
-} // namespace Pspc
+} // namespace Pspg
 } // namespace Pscf

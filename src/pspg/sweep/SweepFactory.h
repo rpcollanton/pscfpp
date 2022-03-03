@@ -1,5 +1,5 @@
-#ifndef PSPC_SWEEP_FACTORY_H
-#define PSPC_SWEEP_FACTORY_H
+#ifndef PSPG_SWEEP_FACTORY_H
+#define PSPG_SWEEP_FACTORY_H
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -14,14 +14,14 @@
 #include <string>
 
 namespace Pscf {
-namespace Pspc {
+namespace Pspg {
 
    using namespace Util;
    
    /**
    * Default Factory for subclasses of Sweep.
    *
-   * \ingroup Pspc_Sweep_Module
+   * \ingroup Pspg_Sweep_Module
    */
    template <int D>
    class SweepFactory : public Factory< Sweep<D> > 
@@ -52,7 +52,7 @@ namespace Pspc {
 
    };
 
-   #ifndef PSPC_SWEEP_FACTORY_TPP
+   #ifndef PSPG_SWEEP_FACTORY_TPP
    // Suppress implicit instantiation
    extern template class SweepFactory<1>;
    extern template class SweepFactory<2>;

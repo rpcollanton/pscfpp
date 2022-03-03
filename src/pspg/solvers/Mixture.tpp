@@ -21,7 +21,8 @@ namespace Pspg
    Mixture<D>::Mixture()
     : vMonomer_(1.0),
       ds_(-1.0),
-      meshPtr_(0)
+      meshPtr_(0),
+      hasStress_(false)
    {  setClassName("Mixture"); }
 
    template <int D>
@@ -73,6 +74,28 @@ namespace Pspg
       for (int i = 0; i < nPolymer(); ++i) {
          polymer(i).setupUnitCell(unitCell, wavelist);
       }
+
+      hasStress_ = false;
+   }
+
+      /*
+   * Reset statistical segment length for one monomer type.
+   */
+   template <int D>
+   void Mixture<D>::setKuhn(int monomerId, double kuhn)
+   {
+      // Set new Kuhn length for relevant Monomer object
+      monomer(monomerId).setKuhn(kuhn);
+
+      // Update kuhn length for all blocks of this monomer type
+      for (int i = 0; i < nPolymer(); ++i) {
+         for (int j =  0; j < polymer(i).nBlock(); ++j) {
+            if (monomerId == polymer(i).block(j).monomerId()) {
+               polymer(i).block(j).setKuhn(kuhn);
+            }
+         }
+      }
+      hasStress_ = false;
    }
 
    /*
@@ -141,8 +164,8 @@ namespace Pspg
 
 
       }
-      
 
+      hasStress_ = false;
    }
 
    /*  
@@ -168,6 +191,8 @@ namespace Pspg
 
       // Note: Solvent does not contribute to derivatives of f_Helmholtz
       // with respect to unit cell parameters at fixed volume fractions.
+
+      hasStress_ = true;
    }
 
    template <int D>

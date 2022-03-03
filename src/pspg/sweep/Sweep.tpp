@@ -1,4 +1,4 @@
-#ifndef PSPC_SWEEP_TPP
+#ifndef PSPG_SWEEP_TPP
 /*
 * PSCF - Polymer Self-Consistent Field Theory
 *
@@ -7,26 +7,26 @@
 */
 
 #include "Sweep.h"
-#include <pspc/System.h>
+#include <pspg/System.h>
 #include <pscf/inter/ChiInteraction.h>
 #include <pscf/sweep/SweepTmpl.tpp>
 #include <util/misc/FileMaster.h>
 #include <util/misc/ioUtil.h>
 
 namespace Pscf {
-namespace Pspc {
+namespace Pspg {
 
    using namespace Util;
 
    // Maximum number of previous states = order of continuation + 1
-   # define PSPC_HISTORY_CAPACITY 3
+   # define PSPG_HISTORY_CAPACITY 3
 
    /*
    * Default constructor.
    */
    template <int D>
    Sweep<D>::Sweep() 
-    : SweepTmpl< BasisFieldState<D> >(PSPC_HISTORY_CAPACITY),
+    : SweepTmpl< BasisFieldState<D> >(PSPG_HISTORY_CAPACITY),
       systemPtr_(0)
    {}
 
@@ -35,7 +35,7 @@ namespace Pspc {
    */
    template <int D>
    Sweep<D>::Sweep(System<D> & system) 
-    : SweepTmpl< BasisFieldState<D> >(PSPC_HISTORY_CAPACITY),
+    : SweepTmpl< BasisFieldState<D> >(PSPG_HISTORY_CAPACITY),
       systemPtr_(&system)
    {}
 
@@ -100,6 +100,10 @@ namespace Pspc {
    {
       UTIL_CHECK(historySize() > 0);
 
+      // GPU Resources
+      int nBlocks, nThreads;
+      ThreadGrid::setThreadsLogical(nMesh, nBlocks, nThreads);
+
       // If historySize() == 1, do nothing: Use previous system state
       // as trial for the new state.
       
@@ -116,30 +120,25 @@ namespace Pspc {
          double coeff;
          int nMonomer = system().mixture().nMonomer();
          int nBasis = system().basis().nBasis();
-         DArray<double>* newFieldPtr;
-         DArray<double>* oldFieldPtr; 
+         RDField<D>* newFieldPtr;
+         RDField<D>* oldFieldPtr; 
          int i, j, k;
+         
          for (i=0; i < nMonomer; ++i) {
+            /// Initialize trial field for this monomer to 0
             newFieldPtr = &(trial_.field(i));
+            assignUniformReal<<<nBlocks, nThreads>>>((*newFieldPtr).cDField(), 0, nMesh);
 
-            // Previous state k = 0 (most recent)
-            oldFieldPtr = &state(0).field(i);
-            coeff = c(0);
-            for (j=0; j < nBasis; ++j) {
-               (*newFieldPtr)[j] = coeff*(*oldFieldPtr)[j];
-            }
-
-            // Previous states k >= 1 (older)
-            for (k = 1; k < historySize(); ++k) {
+            // Add together states with Lagrangian coefficients
+            for (k = 0; k < historySize(); k++) {
                oldFieldPtr = &state(k).field(i);
                coeff = c(k);
-               for (j=0; j < nBasis; ++j) {
-                  (*newFieldPtr)[j] += coeff*(*oldFieldPtr)[j];
-               }
+               pointWiseAddScale<<<nBlocks, nThreads>>>
+                        ((*newFieldPtr).cDField(), (*oldFieldPtr).cDField(), coeff, nMesh);
             }
          }
 
-         // IfisFlexible, then extrapolate unit cell parameters
+         // If isFlexible, then extrapolate unit cell parameters
          if (isFlexible) {
 
             double coeff;
@@ -271,6 +270,6 @@ namespace Pspc {
    void Sweep<D>::cleanup() 
    {  logFile_.close(); }
 
-} // namespace Pspc
+} // namespace Pspg
 } // namespace Pscf
 #endif

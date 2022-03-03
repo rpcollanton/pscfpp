@@ -1,5 +1,5 @@
-#ifndef PSPC_BASIS_FIELD_STATE_H
-#define PSPC_BASIS_FIELD_STATE_H
+#ifndef PSPG_BASIS_FIELD_STATE_H
+#define PSPG_BASIS_FIELD_STATE_H
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -8,11 +8,13 @@
 * Distributed under the terms of the GNU General Public License.
 */
 
+#include <pspg/math/GpuResources.h>
+#include <pspg/field/RDField.h>
 #include "FieldState.h"
 #include <string>
 
 namespace Pscf {
-namespace Pspc
+namespace Pspg
 {
 
    using namespace Util;
@@ -21,7 +23,7 @@ namespace Pspc
    * FieldState for fields in symmetry-adapted basis format.
    */
    template <int D>
-   class BasisFieldState : public FieldState<D, DArray<double> >
+   class BasisFieldState : public FieldState<D, RDField<D> >
    {
    public:
 
@@ -78,22 +80,22 @@ namespace Pspc
       void setSystemState(bool isFlexible);
 
       // Inherited member functions
-      using FieldState<D, DArray<double> >::fields;
-      using FieldState<D, DArray<double> >::field;
-      using FieldState<D, DArray<double> >::unitCell;
-      using FieldState<D, DArray<double> >::system;
-      using FieldState<D, DArray<double> >::hasSystem;
-      using FieldState<D, DArray<double> >::setSystem;
+      using FieldState<D, RDField<D> >::fields;
+      using FieldState<D, RDField<D> >::field;
+      using FieldState<D, RDField<D> >::unitCell;
+      using FieldState<D, RDField<D> >::system;
+      using FieldState<D, RDField<D> >::hasSystem;
+      using FieldState<D, RDField<D> >::setSystem;
 
    };
 
-   #ifndef PSPC_BASIS_FIELD_STATE_TPP
+   #ifndef PSPG_BASIS_FIELD_STATE_TPP
    // Suppress implicit instantiation
    extern template class BasisFieldState<1>;
    extern template class BasisFieldState<2>;
    extern template class BasisFieldState<3>;
    #endif
 
-} // namespace Pspc
+} // namespace Pspg
 } // namespace Pscf
 #endif

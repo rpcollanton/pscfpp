@@ -1,5 +1,5 @@
-#ifndef PSPC_SWEEP_H
-#define PSPC_SWEEP_H
+#ifndef PSPG_SWEEP_H
+#define PSPG_SWEEP_H
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -9,12 +9,12 @@
 */
 
 #include <pscf/sweep/SweepTmpl.h>          // base class template
-#include <pspc/sweep/BasisFieldState.h>    // base class template parameter
+#include <pspg/sweep/BasisFieldState.h>    // base class template parameter
 #include "SweepParameter.h" // parameter class
 #include <util/global.h>
 
 namespace Pscf {
-namespace Pspc {
+namespace Pspg {
 
    using namespace Util;
 
@@ -152,6 +152,6 @@ namespace Pspc {
 
    };
 
-} // namespace Pspc
+} // namespace Pspg
 } // namespace Pscf
 #endif

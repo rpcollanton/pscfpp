@@ -10,19 +10,19 @@ SRC_DIR_REL =../..
 include $(SRC_DIR_REL)/config.mk
 include $(BLD_DIR)/util/config.mk
 include $(BLD_DIR)/pscf/config.mk
-include $(BLD_DIR)/pspc/config.mk
-include $(SRC_DIR)/pspc/patterns.mk
+include $(BLD_DIR)/pspg/config.mk
+include $(SRC_DIR)/pspg/patterns.mk
 include $(SRC_DIR)/util/sources.mk
 include $(SRC_DIR)/pscf/sources.mk
-include $(SRC_DIR)/pspc/sources.mk
+include $(SRC_DIR)/pspg/sources.mk
 
 #-----------------------------------------------------------------------
 # Main targets 
 
-all: $(pspc_sweep_OBJS) 
+all: $(pspg_sweep_OBJS) 
 
 clean:
-	rm -f $(pspc_sweep_OBJS) $(pspc_sweep_OBJS:.o=.d)
+	rm -f $(pspg_sweep_OBJS) $(pspg_sweep_OBJS:.o=.d)
 
 veryclean:
 	$(MAKE) clean
@@ -32,7 +32,7 @@ veryclean:
 #-----------------------------------------------------------------------
 # Include dependency files
 
--include $(pspc_OBJS:.o=.d)
+-include $(pspg_OBJS:.o=.d)
 -include $(pscf_OBJS:.o=.d)
 -include $(util_OBJS:.o=.d)
 -include $(PSCF_FD).d 

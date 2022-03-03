@@ -101,6 +101,18 @@ namespace Pspg
                          WaveList<D> const & wavelist);
 
       /**
+      * Reset statistical segment length for one monomer type.
+      * 
+      * This function resets the kuhn or statistical segment length value
+      * for a monomer type, and updates the associcated value in every 
+      * block of that monomer type.
+      *
+      * \param monomerId  monomer type id
+      * \param kuhn  new value for the statistical segment length
+      */
+      void setKuhn(int monomerId, double kuhn);
+
+      /**
       * Compute concentrations.
       *
       * This function calls the compute function of every molecular
@@ -128,15 +140,18 @@ namespace Pspg
       void computeStress(WaveList<D>& wavelist);
 
       /**
-      * Get derivative of free energy w/ respect to cell parameter.
+      * Get derivative of free energy w/ respect to a unit cell parameter.
       *
-      * Get precomputed value of derivative of free energy per monomer
-      * with respect to unit cell parameter number n.
+      * Get the pre-computed derivative with respect to unit cell 
+      * parameter number n of the free energy per monomer (i.e., of the 
+      * product of the free energy density and the monomer reference 
+      * volume). The returned value is precomputed by the computeStress()
+      * function.
       *
-      * \int n unit cell parameter id
+      * \param n  index of unit cell parameter
       */
-      double stress(int n)
-      {  return stress_[n]; }
+      double stress(int n) const;
+
 
       /**
       * Get monomer reference volume.
@@ -182,6 +197,9 @@ namespace Pspg
       /// Return associated domain by reference.
       Mesh<D> const & mesh() const;
 
+      /// Has stress been computed for current w fields?
+      bool hasStress_;
+
    };
 
    // Inline member function
@@ -201,6 +219,14 @@ namespace Pspg
    {   
       UTIL_ASSERT(meshPtr_);
       return *meshPtr_;
+   }
+
+   // Stress with respect to unit cell parameter n.
+   template <int D>
+   inline double Mixture<D>::stress(int n) const
+   {
+      UTIL_CHECK(hasStress_);  
+      return stress_[n]; 
    }
 
    #ifndef PSPG_MIXTURE_TPP

@@ -710,7 +710,33 @@ namespace Pspg
       domain_.basis().update();
       hasWFields_ = true;
       hasCFields_ = false;
-   } 
+   }
+
+   /*
+   * Set new w-field values, using r-grid fields as inputs.
+   */
+   template <int D>
+   void System<D>::setWRGrid(DArray<RDField<D>> const & fields)
+   {
+      // Update system wFieldsRGrid
+      int nMonomer = mixture().nMonomer();
+      int nMesh = mesh().size();
+
+      // GPU Resources
+      int nBlocks, nThreads;
+      ThreadGrid::setThreadsLogical(nMesh, nBlocks, nThreads);
+
+      for (int i = 0; i < nMonomer; i++) {
+         assignReal<<<nBlocks, nThreads>>>
+               (system().wFieldRGrid(i).cDField(), fields(i).cDField(), nMesh);
+      }
+
+      // Update system wFieldsRgrid
+      domain_.fieldIo().convertRGridToBasis(wFieldsRGrid_, wFields_);
+
+      hasWFields_ = true;
+      hasCFields_ = false;
+   }
 
    /*
    * Solve MDE for current w-fields, without iteration.
@@ -751,7 +777,8 @@ namespace Pspg
       
       hasCFields_ = true;
 
-      // Is this actually necessary? Seemed like it from before. 
+      // Is this actually necessary? Seemed like it -- when iterator().solve()
+      // finished, basis fields weren't up-to-date. 
       fieldIo().convertRGridToBasis(wFieldsRGrid(), wFields());
       fieldIo().convertRGridToBasis(cFieldsRGrid(), cFields());
 
@@ -820,6 +847,31 @@ namespace Pspg
       fieldIo().readFieldsRGrid(inFileName, tmpFieldsRGrid_);
       fieldIo().convertRGridToBasis(tmpFieldsRGrid_, tmpFields_);
       fieldIo().writeFieldsBasis(outFileName, tmpFields_);
+   }
+
+   /*
+   * Set parameters of the associated unit cell.
+   */
+   template <int D>
+   void System<D>::setUnitCell(UnitCell<D> const & unitCell)
+   {
+      UTIL_CHECK(domain_.unitCell().lattice() == unitCell.lattice());
+      unitCell() = unitCell;
+      mixture().setupUnitCell(unitCell());
+      wavelist().computedKSq(unitCell());
+   }
+
+   /*
+   * Set parameters of the associated unit cell.
+   */
+   template <int D>
+   void 
+   System<D>::setUnitCell(FSArray<double, 6> const & parameters)
+   {
+      UTIL_CHECK(domain_.unitCell().nParameter() == parameters.size());
+      unitCell().setParameters(parameters);
+      mixture().setupUnitCell(unitCell());
+      wavelist().computedKSq(unitCell());
    }
 
 } // namespace Pspg

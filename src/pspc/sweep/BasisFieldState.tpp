@@ -120,24 +120,6 @@ namespace Pspc
    {
       system().setWBasis(fields());
 
-      #if 0
-      // Update system  wFields
-      int nMonomer = system().mixture().nMonomer();
-      int nBasis = system().basis().nBasis();
-      int i, j;
-      for (i = 0; i < nMonomer; ++i) {
-         const DArray<double>& stateField = field(i);
-         DArray<double>& systemField = system().wField(i);
-         for (j = 0; j < nBasis; ++j) {
-            systemField[j] = stateField[j];
-         }
-      }
-
-      // Update system wFieldsRgrid
-      system().fieldIo().convertBasisToRGrid(system().wFields(),
-                                             system().wFieldsRGrid());
-      #endif
-
       if (isFlexible) {
          system().setUnitCell(unitCell());
       }

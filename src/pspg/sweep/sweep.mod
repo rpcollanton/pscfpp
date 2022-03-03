@@ -1,13 +1,13 @@
 
 namespace Pscf{
-namespace Pspc{
+namespace Pspg{
 
    /**
-   * \defgroup Pspc_Sweep_Module Sweep
+   * \defgroup Pspg_Sweep_Module Sweep
    *
    * Classes for performing sweeps in parameter space. 
    *
-   * \ingroup Pscf_Pspc_Module
+   * \ingroup Pscf_Pspg_Module
    */
 
 }

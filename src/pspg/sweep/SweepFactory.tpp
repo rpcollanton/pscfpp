@@ -1,5 +1,5 @@
-#ifndef PSPC_SWEEP_FACTORY_TPP
-#define PSPC_SWEEP_FACTORY_TPP
+#ifndef PSPG_SWEEP_FACTORY_TPP
+#define PSPG_SWEEP_FACTORY_TPP
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -15,7 +15,7 @@
 // #include "NonlinearSweep.h" Eventually!
 
 namespace Pscf{
-    namespace Pspc{
+    namespace Pspg{
 
         using namespace Util;
 

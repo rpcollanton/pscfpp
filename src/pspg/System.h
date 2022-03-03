@@ -337,6 +337,27 @@ namespace Pspg
       */
       double pressure() const;
 
+      /**
+      * Set new w fields, in real-space (r-grid) format.
+      *
+      * \param fields  array of new w (chemical potential) fields
+      */  
+      void setWRGrid(DArray<RDField<D>> const & fields);
+
+      /**
+      * Set an association to a new unit cell.
+      *
+      * \param unitCell  new UnitCell<D> (i.e., new parameters)
+      */
+      void setUnitCell(UnitCell<D> const & unitCell);
+
+      /**
+      * Set new parameters of the associated unit cell.
+      *
+      * \param parameters  array of new unit cell parameters.
+      */
+      void setUnitCell(FSArray<double, 6> const & parameters);
+
       /** 
       * Have monomer chemical potential fields (w fields) been set?
       *

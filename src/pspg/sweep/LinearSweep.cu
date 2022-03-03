@@ -5,15 +5,15 @@
 * Distributed under the terms of the GNU General Public License.
 */
 
-#include "FieldState.tpp"
+#include "LinearSweep.tpp"
 
 namespace Pscf {
-   namespace Pspc
+   namespace Pspg
    {
 
-      template class FieldState< 1, DArray<double> >;
-      template class FieldState< 2, DArray<double> >;
-      template class FieldState< 3, DArray<double> >;
+      template class LinearSweep<1>;
+      template class LinearSweep<2>;
+      template class LinearSweep<3>;
 
-   } // namespace Pspc
+   } // namespace Pspg
 } // namespace Pscf

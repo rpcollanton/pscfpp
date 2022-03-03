@@ -1,5 +1,5 @@
-#ifndef PSPC_FIELD_STATE_H
-#define PSPC_FIELD_STATE_H
+#ifndef PSPG_FIELD_STATE_H
+#define PSPG_FIELD_STATE_H
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -9,11 +9,11 @@
 */
 
 #include <pscf/crystal/UnitCell.h>         // member
-#include <pspc/field/FieldIo.h>            // member
+#include <pspg/field/FieldIo.h>            // member
 #include <util/containers/DArray.h>        // member template
 
 namespace Pscf {
-namespace Pspc
+namespace Pspg
 {
 
    using namespace Util;
@@ -34,7 +34,7 @@ namespace Pspc
    * Different choices for class FT can be used to store fields in
    * symmetry-adapted basis function, r-grid or k-grid format.
    *
-   * \ingroup Pspc_Sweep_Module
+   * \ingroup Pspg_Sweep_Module
    */
    template <int D, class FT>
    class FieldState 
@@ -197,13 +197,8 @@ namespace Pspc
       return *systemPtr_; 
    }
 
-   #ifndef PSPC_FIELD_STATE_TPP
-   // Suppress implicit instantiation
-   extern template class FieldState< 1, DArray<double> >;
-   extern template class FieldState< 2, DArray<double> >;
-   extern template class FieldState< 3, DArray<double> >;
-   #endif
-
-} // namespace Pspc
+} // namespace Pspg
 } // namespace Pscf
+
+#include "FieldState.tpp"
 #endif
