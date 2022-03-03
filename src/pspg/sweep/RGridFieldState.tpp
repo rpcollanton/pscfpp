@@ -8,7 +8,7 @@
 * Distributed under the terms of the GNU General Public License.
 */
 
-#include "BasisFieldState.h"
+#include "RGridFieldState.h"
 #include "FieldState.tpp"
 #include <util/global.h>
 
@@ -22,7 +22,7 @@ namespace Pspg
    * Default constructor.
    */
    template <int D>
-   BasisFieldState<D>::BasisFieldState()
+   RGridFieldState<D>::RGridFieldState()
     : FieldState<D, RDField<D> >()
    {}
   
@@ -30,7 +30,7 @@ namespace Pspg
    * Constructor.
    */
    template <int D>
-   BasisFieldState<D>::BasisFieldState(System<D>& system)
+   RGridFieldState<D>::RGridFieldState(System<D>& system)
     : FieldState<D, RDField<D> >(system)
    {}
 
@@ -38,14 +38,14 @@ namespace Pspg
    * Destructor.
    */
    template <int D>
-   BasisFieldState<D>::~BasisFieldState()
+   RGridFieldState<D>::~RGridFieldState()
    {}
 
    /*
    * Allocate all fields.
    */
    template <int D>
-   void BasisFieldState<D>::allocate()
+   void RGridFieldState<D>::allocate()
    {
       // Precondition
       UTIL_CHECK(hasSystem());
@@ -73,7 +73,7 @@ namespace Pspg
    * Read fields in symmetry-adapted basis format. 
    */
    template <int D>
-   void BasisFieldState<D>::read(const std::string & filename)
+   void RGridFieldState<D>::read(const std::string & filename)
    {
       allocate();
       system().fieldIo().readFieldsBasis(filename, fields());
@@ -83,7 +83,7 @@ namespace Pspg
    * Write fields in symmetry-adapted basis format. 
    */
    template <int D>
-   void BasisFieldState<D>::write(const std::string & filename)
+   void RGridFieldState<D>::write(const std::string & filename)
    {
       system().fieldIo().writeFieldsBasis(filename, fields());
    }
@@ -92,7 +92,7 @@ namespace Pspg
    * Get current state of associated System.
    */
    template <int D>
-   void BasisFieldState<D>::getSystemState()
+   void RGridFieldState<D>::getSystemState()
    {
       // Get system unit cell
       unitCell() = system().unitCell();
@@ -115,10 +115,10 @@ namespace Pspg
    }
 
    /*
-   * Set System state to current state of the BasisFieldState object.
+   * Set System state to current state of the RGridFieldState object.
    */
    template <int D>
-   void BasisFieldState<D>::setSystemState(bool isFlexible)
+   void RGridFieldState<D>::setSystemState(bool isFlexible)
    {
       system().setWRGrid(fields());
 

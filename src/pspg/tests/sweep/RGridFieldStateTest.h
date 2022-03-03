@@ -1,12 +1,12 @@
-#ifndef PSPG_BASISFIELDSTATE_TEST_H
-#define PSPG_BASISFIELDSTATE_TEST_H
+#ifndef PSPG_RGridFieldState_TEST_H
+#define PSPG_RGridFieldState_TEST_H
 
 #include <test/UnitTest.h>
 #include <test/UnitTestRunner.h>
 
 #include <pspg/System.h>
-#include <pspg/sweep/BasisFieldState.h>
-#include <pspg/field/BFieldComparison.h>
+#include <pspg/sweep/RGridFieldState.h>
+#include <pspg/field/RFieldComparison.h>
 
 #include <fstream>
 
@@ -14,7 +14,7 @@ using namespace Util;
 using namespace Pscf;
 using namespace Pscf::Pspg;
 
-class BasisFieldStateTest : public UnitTest
+class RGridFieldStateTest : public UnitTest
 {
 
 public:
@@ -42,8 +42,8 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      BasisFieldState<3> bfs1(system);
-      BasisFieldState<3> bfs2;
+      RGridFieldState<3> 1(system);
+      RGridFieldState<3> 2;
 
    }
 
@@ -52,24 +52,19 @@ public:
       printMethod(TEST_FUNC);
       
       System<3> system;
-      BasisFieldState<3> bfs(system);
+      RGridFieldState<3> (system);
    
       // Setup system
-      BasisFieldStateTest::SetUpSystem(system);
+      RGridFieldStateTest::SetUpSystem(system);
 
       // Read in file one way
       system.readWBasis("in/bcc/omega.ref");
       // Read in file another way
-      bfs.read("in/bcc/omega.ref");
-
-      // Convert for comparison
-      DArray< DField<cudaReal> > d_sysFields, d_bfsFields;
-      RDFieldToDField(d_sysFields, system.wFields());
-      RDFieldToDField(d_bfsFields, bfs.fields());
+      .read("in/bcc/omega.ref");
 
       // Compare
-      BFieldComparison comparison;
-      comparison.compare(d_sysFields, d_bfsFields);
+      RFieldComparison<3> comparison;
+      comparison.compare(system.wFields(), .fields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
 
@@ -81,24 +76,19 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      BasisFieldState<3> bfs1(system), bfs2(system);
+      RGridFieldState<3> 1(system), 2(system);
 
       // Setup system
-      BasisFieldStateTest::SetUpSystem(system);
+      RGridFieldStateTest::SetUpSystem(system);
 
       // read, write, read
-      bfs1.read("in/bcc/omega.ref");
-      bfs1.write("out/testBasisFieldStateWrite.ref");
-      bfs2.read("out/testBasisFieldStateWrite.ref");
-
-      // Convert for comparison
-      DArray< DField<cudaReal> > d_bfs1, d_bfs2;
-      RDFieldToDField(d_bfs1, bfs1.fields());
-      RDFieldToDField(d_bfs2, bfs2.fields());
+      1.read("in/bcc/omega.ref");
+      1.write("out/testRGridFieldStateWrite.ref");
+      2.read("out/testRGridFieldStateWrite.ref");
 
       // compare
-      BFieldComparison comparison;
-      comparison.compare(d_bfs1,d_bfs2);
+      RFieldComparison<3> comparison;
+      comparison.compare(1.fields(),2.fields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 5.0e-7);
    }
@@ -108,24 +98,19 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      BasisFieldState<3> bfs(system);
+      RGridFieldState<3> (system);
 
       // Setup system
-      BasisFieldStateTest::SetUpSystem(system);
+      RGridFieldStateTest::SetUpSystem(system);
 
       // Read in state using system
       system.readWBasis("in/bcc/omega.ref");
-      // get it using bfs
-      bfs.getSystemState();
-
-      // Convert for comparison
-      DArray< DField<cudaReal> > d_sysFields, d_bfsFields;
-      RDFieldToDField(d_sysFields, system.wFields());
-      RDFieldToDField(d_bfsFields, bfs.fields());
+      // get it using 
+      .getSystemState();
 
       // compare
-      BFieldComparison comparison;
-      comparison.compare(d_bfsFields,d_sysFields);
+      RFieldComparison<3> comparison;
+      comparison.compare(.fields(),system.wFields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
@@ -135,24 +120,19 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      BasisFieldState<3> bfs(system);
+      RGridFieldState<3> (system);
 
       // Setup system
-      BasisFieldStateTest::SetUpSystem(system);
+      RGridFieldStateTest::SetUpSystem(system);
 
-      // Read in state using bfs
-      bfs.read("in/bcc/omega.ref");
+      // Read in state using 
+      .read("in/bcc/omega.ref");
       // set system state
-      bfs.setSystemState(true);
-
-      // Convert for comparison
-      DArray< DField<cudaReal> > d_sysFields, d_bfsFields;
-      RDFieldToDField(d_sysFields, system.wFields());
-      RDFieldToDField(d_bfsFields, bfs.fields());
+      .setSystemState(true);
 
       // compare
-      BFieldComparison comparison;
-      comparison.compare(d_bfsFields,d_sysFields);
+      RFieldComparison<3> comparison;
+      comparison.compare(.fields(),system.wFields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
@@ -162,12 +142,12 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      BasisFieldState<3> bfs;
+      RGridFieldState<3> ;
 
       // Setup system
-      BasisFieldStateTest::SetUpSystem(system);
+      RGridFieldStateTest::SetUpSystem(system);
       // Invoke setSystem
-      bfs.setSystem(system);
+      .setSystem(system);
    }
 
    void SetUpSystem(System<3>& system)
@@ -203,15 +183,15 @@ public:
 
 
 
-TEST_BEGIN(BasisFieldStateTest)
+TEST_BEGIN(RGridFieldStateTest)
 
-TEST_ADD(BasisFieldStateTest, testConstructor)
-TEST_ADD(BasisFieldStateTest, testRead)
-TEST_ADD(BasisFieldStateTest, testWrite)
-TEST_ADD(BasisFieldStateTest, testGetSystemState)
-TEST_ADD(BasisFieldStateTest, testSetSystemState)
-TEST_ADD(BasisFieldStateTest, testSetSystem)
+TEST_ADD(RGridFieldStateTest, testConstructor)
+TEST_ADD(RGridFieldStateTest, testRead)
+TEST_ADD(RGridFieldStateTest, testWrite)
+TEST_ADD(RGridFieldStateTest, testGetSystemState)
+TEST_ADD(RGridFieldStateTest, testSetSystemState)
+TEST_ADD(RGridFieldStateTest, testSetSystem)
 
-TEST_END(BasisFieldStateTest)
+TEST_END(RGridFieldStateTest)
 
 #endif

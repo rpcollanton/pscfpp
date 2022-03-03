@@ -5,15 +5,15 @@
 * Distributed under the terms of the GNU General Public License.
 */
 
-#include "BasisFieldState.tpp"
+#include "RGridFieldState.tpp"
 
 namespace Pscf {
 namespace Pspg
 {
 
-   template class BasisFieldState<1>;
-   template class BasisFieldState<2>;
-   template class BasisFieldState<3>;
+   template class RGridFieldState<1>;
+   template class RGridFieldState<2>;
+   template class RGridFieldState<3>;
 
 } // namespace Pspg
 } // namespace Pscf

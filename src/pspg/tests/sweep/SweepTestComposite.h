@@ -4,11 +4,11 @@
 #include <test/CompositeTestRunner.h>
 
 // include the headers for individual tests
-#include "BasisFieldStateTest.h"
+#include "RGridFieldStateTest.h"
 #include "SweepTest.h"
 
 TEST_COMPOSITE_BEGIN(SweepTestComposite)
-TEST_COMPOSITE_ADD_UNIT(BasisFieldStateTest)
+TEST_COMPOSITE_ADD_UNIT(RGridFieldStateTest)
 TEST_COMPOSITE_ADD_UNIT(SweepTest)
 TEST_COMPOSITE_END
 
