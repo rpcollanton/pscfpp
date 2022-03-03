@@ -100,77 +100,80 @@ namespace Pspg {
    {
       UTIL_CHECK(historySize() > 0);
 
+      // If historySize() == 1, do nothing: Use previous system state
+      // as trial for the new state.
+      if (historySize() == 1) {
+         return;
+      }
+
+      // Get system parameters
+      int nMonomer = system().mixture().nMonomer();
+      int nMesh = system().mesh().size();
+
       // GPU Resources
       int nBlocks, nThreads;
       ThreadGrid::setThreadsLogical(nMesh, nBlocks, nThreads);
 
-      // If historySize() == 1, do nothing: Use previous system state
-      // as trial for the new state.
+      UTIL_CHECK(historySize() <= historyCapacity());
+
+      // Does the iterator allow a flexible unit cell?
+      bool isFlexible = system().iterator().isFlexible();
+
+      // Compute coefficients of polynomial extrapolation to sNew
+      setCoefficients(sNew);
+
+      // Set extrapolated trial w fields 
+      double coeff;
+
+      RDField<D>* newFieldPtr;
+      RDField<D>* oldFieldPtr; 
       
-      if (historySize() > 1) {
-         UTIL_CHECK(historySize() <= historyCapacity());
+      for (int i = 0; i < nMonomer; ++i) {
+         /// Initialize trial field for this monomer to 0
+         newFieldPtr = &(trial_.field(i));
+         assignUniformReal<<<nBlocks, nThreads>>>((*newFieldPtr).cDField(), 0, nMesh);
 
-         // Does the iterator allow a flexible unit cell ?
-         bool isFlexible = system().iterator().isFlexible();
-
-         // Compute coefficients of polynomial extrapolation to sNew
-         setCoefficients(sNew);
-
-         // Set extrapolated trial w fields 
-         double coeff;
-         int nMonomer = system().mixture().nMonomer();
-         int nBasis = system().basis().nBasis();
-         RDField<D>* newFieldPtr;
-         RDField<D>* oldFieldPtr; 
-         int i, j, k;
-         
-         for (i=0; i < nMonomer; ++i) {
-            /// Initialize trial field for this monomer to 0
-            newFieldPtr = &(trial_.field(i));
-            assignUniformReal<<<nBlocks, nThreads>>>((*newFieldPtr).cDField(), 0, nMesh);
-
-            // Add together states with Lagrangian coefficients
-            for (k = 0; k < historySize(); k++) {
-               oldFieldPtr = &state(k).field(i);
-               coeff = c(k);
-               pointWiseAddScale<<<nBlocks, nThreads>>>
-                        ((*newFieldPtr).cDField(), (*oldFieldPtr).cDField(), coeff, nMesh);
-            }
+         // Add together states with Lagrangian coefficients
+         for (int k = 0; k < historySize(); k++) {
+            oldFieldPtr = &state(k).field(i);
+            coeff = c(k);
+            pointWiseAddScale<<<nBlocks, nThreads>>>
+                     ((*newFieldPtr).cDField(), (*oldFieldPtr).cDField(), coeff, nMesh);
          }
-
-         // If isFlexible, then extrapolate unit cell parameters
-         if (isFlexible) {
-
-            double coeff;
-            double parameter;
-            int nParameter = system().unitCell().nParameter();
-
-            // Append contributions from k= 0 (most recent state)
-            coeff = c(0);
-            unitCellParameters_.clear();
-            for (int i = 0; i < nParameter; ++i) {
-               parameter = state(0).unitCell().parameter(i);
-               unitCellParameters_.append(coeff*parameter);
-            }
-
-            // Add contributions from k > 0 (older states)
-            for (k = 1; k < historySize(); ++k) {
-               coeff = c(k);
-               for (int i = 0; i < nParameter; ++i) {
-                  parameter = state(k).unitCell().parameter(i);
-                  unitCellParameters_[i] += coeff*parameter;
-               }
-            }
-
-            // Reset trial_.unitCell() object
-            trial_.unitCell().setParameters(unitCellParameters_);
-         }
-
-         // Transfer data from trial_ state to parent system
-         trial_.setSystemState(isFlexible);
       }
 
-    
+      // If isFlexible, then extrapolate unit cell parameters
+      if (isFlexible) {
+
+         double coeff;
+         double parameter;
+         int nParameter = system().unitCell().nParameter();
+
+         // Append contributions from k= 0 (most recent state)
+         coeff = c(0);
+         unitCellParameters_.clear();
+         for (int i = 0; i < nParameter; ++i) {
+            parameter = state(0).unitCell().parameter(i);
+            unitCellParameters_.append(coeff*parameter);
+         }
+
+         // Add contributions from k > 0 (older states)
+         for (int k = 1; k < historySize(); ++k) {
+            coeff = c(k);
+            for (int i = 0; i < nParameter; ++i) {
+               parameter = state(k).unitCell().parameter(i);
+               unitCellParameters_[i] += coeff*parameter;
+            }
+         }
+
+         // Reset trial_.unitCell() object
+         trial_.unitCell().setParameters(unitCellParameters_);
+      }
+
+      // Transfer data from trial_ state to parent system
+      trial_.setSystemState(isFlexible);
+
+
    };
 
    /*

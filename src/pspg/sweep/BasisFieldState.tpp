@@ -85,7 +85,7 @@ namespace Pspg
    template <int D>
    void BasisFieldState<D>::write(const std::string & filename)
    {
-      system().fieldIo().writeFieldsBasis(filename, fields(), unitCell());
+      system().fieldIo().writeFieldsBasis(filename, fields());
    }
 
    /*
@@ -105,8 +105,7 @@ namespace Pspg
       int nBlocks, nThreads;
       ThreadGrid::setThreadsLogical(nMesh, nBlocks, nThreads);
 
-      int i, j;
-      for (i = 0; i < nMonomer; ++i) {
+      for (int i = 0; i < nMonomer; ++i) {
          RDField<D>& stateField = field(i);
          const RDField<D>& systemField = system().wFieldRGrid(i);
          assignReal<<<nBlocks, nThreads>>>
