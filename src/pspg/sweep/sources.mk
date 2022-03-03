@@ -1,6 +1,6 @@
 
 pspg_sweep_= \
-  pspg/sweep/BasisFieldState.cu \
+  pspg/sweep/RGridFieldState.cu \
   pspg/sweep/Sweep.cu \
   pspg/sweep/LinearSweep.cu \
   pspg/sweep/SweepFactory.cu

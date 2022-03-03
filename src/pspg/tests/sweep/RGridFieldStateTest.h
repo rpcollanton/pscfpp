@@ -42,8 +42,8 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      RGridFieldState<3> 1(system);
-      RGridFieldState<3> 2;
+      RGridFieldState<3> rfs1(system);
+      RGridFieldState<3> rfs2;
 
    }
 
@@ -52,7 +52,7 @@ public:
       printMethod(TEST_FUNC);
       
       System<3> system;
-      RGridFieldState<3> (system);
+      RGridFieldState<3> rfs(system);
    
       // Setup system
       RGridFieldStateTest::SetUpSystem(system);
@@ -60,11 +60,11 @@ public:
       // Read in file one way
       system.readWBasis("in/bcc/omega.ref");
       // Read in file another way
-      .read("in/bcc/omega.ref");
+      rfs.read("in/bcc/omega.ref");
 
       // Compare
       RFieldComparison<3> comparison;
-      comparison.compare(system.wFields(), .fields());
+      comparison.compare(system.wFields(), rfs.fields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
 
@@ -76,19 +76,19 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      RGridFieldState<3> 1(system), 2(system);
+      RGridFieldState<3> rfs1(system), rfs2(system);
 
       // Setup system
       RGridFieldStateTest::SetUpSystem(system);
 
       // read, write, read
-      1.read("in/bcc/omega.ref");
-      1.write("out/testRGridFieldStateWrite.ref");
-      2.read("out/testRGridFieldStateWrite.ref");
+      rfs1.read("in/bcc/omega.ref");
+      rfs1.write("out/testRGridFieldStateWrite.ref");
+      rfs2.read("out/testRGridFieldStateWrite.ref");
 
       // compare
       RFieldComparison<3> comparison;
-      comparison.compare(1.fields(),2.fields());
+      comparison.compare(rfs1.fields(),rfs2.fields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 5.0e-7);
    }
@@ -98,7 +98,7 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      RGridFieldState<3> (system);
+      RGridFieldState<3> rfs(system);
 
       // Setup system
       RGridFieldStateTest::SetUpSystem(system);
@@ -106,11 +106,11 @@ public:
       // Read in state using system
       system.readWBasis("in/bcc/omega.ref");
       // get it using 
-      .getSystemState();
+      rfs.getSystemState();
 
       // compare
       RFieldComparison<3> comparison;
-      comparison.compare(.fields(),system.wFields());
+      comparison.compare(rfs.fields(),system.wFields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
@@ -120,19 +120,19 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      RGridFieldState<3> (system);
+      RGridFieldState<3> rfs(system);
 
       // Setup system
       RGridFieldStateTest::SetUpSystem(system);
 
       // Read in state using 
-      .read("in/bcc/omega.ref");
+      rfs.read("in/bcc/omega.ref");
       // set system state
-      .setSystemState(true);
+      rfs.setSystemState(true);
 
       // compare
       RFieldComparison<3> comparison;
-      comparison.compare(.fields(),system.wFields());
+      comparison.compare(rfs.fields(),system.wFields());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
@@ -142,12 +142,12 @@ public:
       printMethod(TEST_FUNC);
 
       System<3> system;
-      RGridFieldState<3> ;
+      RGridFieldState<3> rfs;
 
       // Setup system
       RGridFieldStateTest::SetUpSystem(system);
       // Invoke setSystem
-      .setSystem(system);
+      rfs.setSystem(system);
    }
 
    void SetUpSystem(System<3>& system)

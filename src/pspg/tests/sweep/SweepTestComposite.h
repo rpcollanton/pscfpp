@@ -5,7 +5,7 @@
 
 // include the headers for individual tests
 #include "RGridFieldStateTest.h"
-#include "SweepTest.h"
+//#include "SweepTest.h"
 
 TEST_COMPOSITE_BEGIN(SweepTestComposite)
 TEST_COMPOSITE_ADD_UNIT(RGridFieldStateTest)
