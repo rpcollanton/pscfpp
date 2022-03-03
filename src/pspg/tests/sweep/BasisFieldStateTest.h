@@ -53,7 +53,6 @@ public:
       
       System<3> system;
       BasisFieldState<3> bfs(system);
-      BFieldComparison comparison;
    
       // Setup system
       BasisFieldStateTest::SetUpSystem(system);
@@ -62,10 +61,17 @@ public:
       system.readWBasis("in/bcc/omega.ref");
       // Read in file another way
       bfs.read("in/bcc/omega.ref");
+
+      // Convert for comparison
+      DArray< DField<cudaReal> > d_sysFields, d_bfsFields;
+      RDFieldToDField(d_sysFields, system.wFields());
+      RDFieldToDField(d_bfsFields, bfs.fields());
+
       // Compare
-      comparison.compare(bfs.fields(), system.wFields());
+      BFieldComparison comparison;
+      comparison.compare(d_sysFields, d_bfsFields);
       // Assert small difference
-      TEST_ASSERT(comparison.maxDiff() < 5.0e-7);
+      TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
 
    }
 
@@ -76,7 +82,6 @@ public:
 
       System<3> system;
       BasisFieldState<3> bfs1(system), bfs2(system);
-      BFieldComparison comparison;
 
       // Setup system
       BasisFieldStateTest::SetUpSystem(system);
@@ -86,8 +91,14 @@ public:
       bfs1.write("out/testBasisFieldStateWrite.ref");
       bfs2.read("out/testBasisFieldStateWrite.ref");
 
+      // Convert for comparison
+      DArray< DField<cudaReal> > d_bfs1, d_bfs2;
+      RDFieldToDField(d_bfs1, bfs1.fields());
+      RDFieldToDField(d_bfs2, bfs2.fields());
+
       // compare
-      comparison.compare(bfs1.fields(),bfs2.fields());
+      BFieldComparison comparison;
+      comparison.compare(d_bfs1,d_bfs2);
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 5.0e-7);
    }
@@ -98,7 +109,6 @@ public:
 
       System<3> system;
       BasisFieldState<3> bfs(system);
-      BFieldComparison comparison;
 
       // Setup system
       BasisFieldStateTest::SetUpSystem(system);
@@ -107,10 +117,17 @@ public:
       system.readWBasis("in/bcc/omega.ref");
       // get it using bfs
       bfs.getSystemState();
+
+      // Convert for comparison
+      DArray< DField<cudaReal> > d_sysFields, d_bfsFields;
+      RDFieldToDField(d_sysFields, system.wFields());
+      RDFieldToDField(d_bfsFields, bfs.fields());
+
       // compare
-      comparison.compare(bfs.fields(),system.wFields());
+      BFieldComparison comparison;
+      comparison.compare(d_bfsFields,d_sysFields);
       // Assert small difference
-      TEST_ASSERT(comparison.maxDiff() < 5.0e-7);
+      TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
 
    void testSetSystemState()
@@ -119,7 +136,6 @@ public:
 
       System<3> system;
       BasisFieldState<3> bfs(system);
-      BFieldComparison comparison;
 
       // Setup system
       BasisFieldStateTest::SetUpSystem(system);
@@ -128,10 +144,17 @@ public:
       bfs.read("in/bcc/omega.ref");
       // set system state
       bfs.setSystemState(true);
+
+      // Convert for comparison
+      DArray< DField<cudaReal> > d_sysFields, d_bfsFields;
+      RDFieldToDField(d_sysFields, system.wFields());
+      RDFieldToDField(d_bfsFields, bfs.fields());
+
       // compare
-      comparison.compare(bfs.fields(),system.wFields());
+      BFieldComparison comparison;
+      comparison.compare(d_bfsFields,d_sysFields);
       // Assert small difference
-      TEST_ASSERT(comparison.maxDiff() < 5.0e-7);
+      TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
 
    void testSetSystem()
@@ -155,6 +178,25 @@ public:
       openInputFile("in/bcc/param.flex", in);
       system.readParam(in);
       in.close();
+   }
+
+   template <int D>
+   void RDFieldToDField(DArray<DField<cudaReal>> & out, DArray<RDField<D>> const & in)
+   {
+      // if not allocated, allocate
+      int nField = in.capacity();
+      int nPoint = in[0].capacity();
+      if (!out.isAllocated()) {
+         out.allocate(nField);
+         for (int i = 0; i < nField; i++) {
+            out[i].allocate(nPoint);
+         }
+      }
+
+      // Copy
+      for (int i = 0; i < nField; i++) {
+         cudaMemcpy(out[i].cDField(), in[i].cDField(), nPoint*sizeof(cudaReal), cudaMemcpyDeviceToDevice);
+      }
    }
 
 };
