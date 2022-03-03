@@ -16,6 +16,8 @@
 
 #include <pspg/iterator/Iterator.h>
 #include <pspg/iterator/IteratorFactory.h>
+#include <pspg/sweep/Sweep.h>
+#include <pspg/sweep/SweepFactory.h>
 
 #include <util/format/Str.h>
 #include <util/format/Int.h>
@@ -56,8 +58,8 @@ namespace Pspg
       hasMixture_(false),
       isAllocated_(false),
       hasWFields_(false),
-      hasCFields_(false)
-      // hasSweep_(0)
+      hasCFields_(false),
+      hasSweep_(false)
    {  
       setClassName("System");
       domain_.setFileMaster(fileMaster_);
@@ -88,6 +90,12 @@ namespace Pspg
       }
       if (wavelistPtr_) {
          delete wavelistPtr_; 
+      }
+      if (sweepPtr_) {
+         delete sweepPtr_;
+      }
+      if (sweepFactoryPtr_) {
+         delete sweepFactoryPtr_;
       }
       if (isAllocated_) {
          delete[] kernelWorkSpace_;
@@ -224,6 +232,18 @@ namespace Pspg
          UTIL_THROW(msg.c_str());
       }
       iterator().setup();
+
+      // Optionally instantiate a Sweep object
+      readOptional<bool>(in, "hasSweep", hasSweep_);
+      if (hasSweep_) {
+         bool isEnd;
+         sweepPtr_ = 
+            sweepFactoryPtr_->readObject(in, *this, className, isEnd);
+         if (!sweepPtr_) {
+            UTIL_THROW("Unrecognized Sweep subclass name");
+         }
+         sweepPtr_->setSystem(*this);
+      }
    }
 
    /*
@@ -357,6 +377,10 @@ namespace Pspg
                readNext = false;
             }
          } else 
+         if (command == "SWEEP") {
+            // After iterating and converging, sweep.
+            sweep();
+         } else
          if (command == "WRITE_W_BASIS") {
             UTIL_CHECK(hasWFields_);
             readEcho(in, filename);
@@ -728,7 +752,7 @@ namespace Pspg
 
       for (int i = 0; i < nMonomer; i++) {
          assignReal<<<nBlocks, nThreads>>>
-               (system().wFieldRGrid(i).cDField(), fields(i).cDField(), nMesh);
+               (wFieldRGrid(i).cDField(), fields[i].cDField(), nMesh);
       }
 
       // Update system wFieldsRgrid
@@ -793,6 +817,20 @@ namespace Pspg
    }
 
    /*
+   * Sweep in parameter space.
+   */
+   template <int D>
+   void System<D>::sweep()
+   {
+      UTIL_CHECK(hasSweep_);
+      UTIL_CHECK(hasWFields_);
+      Log::file() << std::endl;
+      Log::file() << std::endl;
+      // Call sweep
+      sweepPtr_->sweep();
+   }
+
+   /*
    * Convert fields from symmetry-adpated basis to real-space grid format.
    */
    template <int D>
@@ -853,11 +891,11 @@ namespace Pspg
    * Set parameters of the associated unit cell.
    */
    template <int D>
-   void System<D>::setUnitCell(UnitCell<D> const & unitCell)
+   void System<D>::setUnitCell(UnitCell<D> const & cell)
    {
-      UTIL_CHECK(domain_.unitCell().lattice() == unitCell.lattice());
-      unitCell() = unitCell;
-      mixture().setupUnitCell(unitCell());
+      UTIL_CHECK(domain_.unitCell().lattice() == cell.lattice());
+      unitCell() = cell;
+      mixture().setupUnitCell(unitCell(),wavelist());
       wavelist().computedKSq(unitCell());
    }
 
@@ -870,7 +908,7 @@ namespace Pspg
    {
       UTIL_CHECK(domain_.unitCell().nParameter() == parameters.size());
       unitCell().setParameters(parameters);
-      mixture().setupUnitCell(unitCell());
+      mixture().setupUnitCell(unitCell(),wavelist());
       wavelist().computedKSq(unitCell());
    }
 

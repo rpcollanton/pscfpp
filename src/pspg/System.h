@@ -431,6 +431,22 @@ namespace Pspg
       int iterate();
 
       /**
+      * Sweep in parameter space, solving an SCF problem at each point.
+      *
+      * This function uses a Sweep object that was initialized in the 
+      * parameter file to solve the SCF problem at a sequence of points
+      * along a line in parameter space. The nature of this sequence of
+      * points is determined by implementation of a subclass of Sweep
+      * and the parameters passed to the sweep object in the parameter 
+      * file.  The Iterator that is initialized in the parameter file 
+      * is called at each state point.
+      *
+      * An Exception is thrown if this is called when no Sweep has been 
+      * created (i.e., if hasSweep_ == false).
+      */
+      void sweep();
+
+      /**
       * Convert a field from symmetry-adapted basis to r-grid format.
       *
       * This function uses the arrays that stored monomer concentration 

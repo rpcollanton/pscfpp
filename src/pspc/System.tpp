@@ -808,6 +808,7 @@ namespace Pspc
    template <int D>
    void System<D>::sweep()
    {
+      UTIL_CHECK(hasSweep_);
       UTIL_CHECK(hasWFields_);
       Log::file() << std::endl;
       Log::file() << std::endl;
