@@ -47,52 +47,6 @@ public:
 
    }
 
-   void testRead()
-   {
-      printMethod(TEST_FUNC);
-      
-      System<3> system;
-      RGridFieldState<3> rfs(system);
-   
-      // Setup system
-      RGridFieldStateTest::SetUpSystem(system);
-
-      // Read in file one way
-      system.readWBasis("in/bcc/omega.ref");
-      // Read in file another way
-      rfs.read("in/bcc/omega.ref");
-
-      // Compare
-      RFieldComparison<3> comparison;
-      comparison.compare(system.wFields(), rfs.fields());
-      // Assert small difference
-      TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
-
-   }
-
-   void testWrite()
-   {
-      // Write tested with a read/write/read/comparison procedure
-      printMethod(TEST_FUNC);
-
-      System<3> system;
-      RGridFieldState<3> rfs1(system), rfs2(system);
-
-      // Setup system
-      RGridFieldStateTest::SetUpSystem(system);
-
-      // read, write, read
-      rfs1.read("in/bcc/omega.ref");
-      rfs1.write("out/testRGridFieldStateWrite.ref");
-      rfs2.read("out/testRGridFieldStateWrite.ref");
-
-      // compare
-      RFieldComparison<3> comparison;
-      comparison.compare(rfs1.fields(),rfs2.fields());
-      // Assert small difference
-      TEST_ASSERT(comparison.maxDiff() < 5.0e-7);
-   }
-
    void testGetSystemState()
    {
       printMethod(TEST_FUNC);
@@ -110,7 +64,7 @@ public:
 
       // compare
       RFieldComparison<3> comparison;
-      comparison.compare(rfs.fields(),system.wFields());
+      comparison.compare(rfs.fields(),system.wFieldsRGrid());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
@@ -125,14 +79,15 @@ public:
       // Setup system
       RGridFieldStateTest::SetUpSystem(system);
 
-      // Read in state using 
-      rfs.read("in/bcc/omega.ref");
+      // Read basis format file into rgrid field
+      rfs.allocate();
+      readBasisToRGrid("in/bcc/omega.ref", rfs.fields(), system);
       // set system state
       rfs.setSystemState(true);
 
       // compare
       RFieldComparison<3> comparison;
-      comparison.compare(rfs.fields(),system.wFields());
+      comparison.compare(rfs.fields(), system.wFieldsRGrid());
       // Assert small difference
       TEST_ASSERT(comparison.maxDiff() < 1.0e-10);
    }
@@ -161,22 +116,24 @@ public:
    }
 
    template <int D>
-   void RDFieldToDField(DArray<DField<cudaReal>> & out, DArray<RDField<D>> const & in)
+   void readBasisToRGrid(std::string filename, DArray<RDField<D>> & rfields, System<D> & system) 
    {
-      // if not allocated, allocate
-      int nField = in.capacity();
-      int nPoint = in[0].capacity();
-      if (!out.isAllocated()) {
-         out.allocate(nField);
-         for (int i = 0; i < nField; i++) {
-            out[i].allocate(nPoint);
-         }
+      // Holding area for basis 
+      DArray<RDField<D>> tempBasis;
+      int nBasis = system.basis().nStar(); 
+      
+      // Allocate
+      tempBasis.allocate(system.mixture().nMonomer());
+      for (int i = 0; i < system.mixture().nMonomer(); i++) {
+         tempBasis[i].allocate(nBasis);
       }
 
-      // Copy
-      for (int i = 0; i < nField; i++) {
-         cudaMemcpy(out[i].cDField(), in[i].cDField(), nPoint*sizeof(cudaReal), cudaMemcpyDeviceToDevice);
-      }
+      // Read in field in basis format 
+      system.fieldIo().readFieldsBasis(filename, tempBasis);
+
+      // Convert
+      system.fieldIo().convertBasisToRGrid(tempBasis, rfields);
+
    }
 
 };
@@ -186,8 +143,6 @@ public:
 TEST_BEGIN(RGridFieldStateTest)
 
 TEST_ADD(RGridFieldStateTest, testConstructor)
-TEST_ADD(RGridFieldStateTest, testRead)
-TEST_ADD(RGridFieldStateTest, testWrite)
 TEST_ADD(RGridFieldStateTest, testGetSystemState)
 TEST_ADD(RGridFieldStateTest, testSetSystemState)
 TEST_ADD(RGridFieldStateTest, testSetSystem)

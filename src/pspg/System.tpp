@@ -66,6 +66,7 @@ namespace Pspg
 
       interactionPtr_ = new ChiInteraction();
       iteratorFactoryPtr_ = new IteratorFactory<D>(*this); 
+      sweepFactoryPtr_ = new SweepFactory<D>(*this);
       wavelistPtr_ = new WaveList<D>();
 
       ThreadGrid::init();
@@ -893,7 +894,7 @@ namespace Pspg
    template <int D>
    void System<D>::setUnitCell(UnitCell<D> const & cell)
    {
-      UTIL_CHECK(domain_.unitCell().lattice() == cell.lattice());
+      UTIL_CHECK(unitCell().lattice() == cell.lattice());
       unitCell() = cell;
       mixture().setupUnitCell(unitCell(),wavelist());
       wavelist().computedKSq(unitCell());

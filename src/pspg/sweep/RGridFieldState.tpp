@@ -1,5 +1,5 @@
-#ifndef PSPG_BASIS_FIELD_STATE_TPP
-#define PSPG_BASIS_FIELD_STATE_TPP
+#ifndef PSPG_RGRID_FIELD_STATE_TPP
+#define PSPG_RGRID_FIELD_STATE_TPP
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -58,36 +58,20 @@ namespace Pspg
          fields().allocate(nMonomer);
       }
 
+      IntVec<D> meshdim = system().mesh().dimensions();
       int nMesh = system().mesh().size();
       UTIL_CHECK(nMesh > 0);
       for (int i = 0; i < nMonomer; ++i) {
          if (field(i).isAllocated()) {
-            UTIL_CHECK(field(i).capacity() == nMesh);
+            UTIL_CHECK(field(i).meshDimensions() == meshdim);
          } else {
-            field(i).allocate(nMesh);
+            field(i).allocate(meshdim);
          }
       }
-   }
- 
-   /**
-   * Read fields in symmetry-adapted basis format. 
-   */
-   template <int D>
-   void RGridFieldState<D>::read(const std::string & filename)
-   {
-      allocate();
-      system().fieldIo().readFieldsBasis(filename, fields());
-   }
 
-   /**
-   * Write fields in symmetry-adapted basis format. 
-   */
-   template <int D>
-   void RGridFieldState<D>::write(const std::string & filename)
-   {
-      system().fieldIo().writeFieldsBasis(filename, fields());
+      // TEMPORARY. Set up unit cell here. Should be adjusted later.
+      unitCell() = system().unitCell();
    }
-
    /*
    * Get current state of associated System.
    */

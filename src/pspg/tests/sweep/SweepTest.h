@@ -7,7 +7,7 @@
 #include <pspg/System.h>
 #include <pspg/sweep/SweepFactory.h>
 #include <pspg/sweep/LinearSweep.h>
-#include <pspg/field/BFieldComparison.h>
+#include <pspg/field/RFieldComparison.h>
 #include <util/format/Dbl.h>
 
 #include <fstream>
@@ -247,6 +247,7 @@ public:
    {
       system.fileMaster().setInputPrefix(filePrefix());
       system.fileMaster().setOutputPrefix(filePrefix());
+      
       std::ifstream in;
       openInputFile(fname, in);
       system.readParam(in);
@@ -264,7 +265,8 @@ public:
       fieldsRef.allocate(5);
       for (int i = 0; i < 5; ++i) {
          fieldsRef[i].setSystem(system);
-         fieldsRef[i].read("in/sweepref/" + paramname + "/" + std::to_string(i) +"_w.bf");
+         fieldsRef[i].allocate();
+         readBasisToRGrid("in/sweepref/" + paramname + "/" + std::to_string(i) +"_w.bf", fieldsRef[i].fields(), system);
       }
 
       // Read initial field guess and sweep
@@ -282,25 +284,48 @@ public:
       fieldsOut.allocate(5);
       for (int i = 0; i < 5; ++i) {
          fieldsOut[i].setSystem(system);
-         fieldsOut[i].read("out/" + paramname + "/" + std::to_string(i) +"_w.bf");
+         fieldsOut[i].allocate();
+         readBasisToRGrid("out/" + paramname + "/" + std::to_string(i) +"_w.bf", fieldsOut[i].fields(), system);
       }
 
       // Compare output
-      BFieldComparison comparison(1);
+      RFieldComparison<1> comparison;
       double maxDiff = 0.0;
       for (int i = 0; i < 5; ++i) {
          comparison.compare(fieldsRef[i].fields(), fieldsOut[i].fields());
+         std::cout << "diff " << i << " = " << comparison.maxDiff() << std::endl;
          if (comparison.maxDiff() > maxDiff) {
             maxDiff = comparison.maxDiff();
          }
       }
-      //setVerbose(1);
+      setVerbose(0);
       if (verbose() > 0) {
          std::cout << std::endl;
          std::cout << "maxDiff = " << Dbl(maxDiff, 14, 6) << std::endl;
       }
 
       return maxDiff;
+   }
+
+   template <int D>
+   void readBasisToRGrid(std::string filename, DArray<RDField<D>> & rfields, System<D> & system) 
+   {
+      // Holding area for basis 
+      DArray<RDField<D>> tempBasis;
+      int nBasis = system.basis().nStar(); 
+      
+      // Allocate
+      tempBasis.allocate(system.mixture().nMonomer());
+      for (int i = 0; i < system.mixture().nMonomer(); i++) {
+         tempBasis[i].allocate(nBasis);
+      }
+
+      // Read in field in basis format 
+      system.fieldIo().readFieldsBasis(filename, tempBasis);
+
+      // Convert
+      system.fieldIo().convertBasisToRGrid(tempBasis, rfields);
+
    }
 
 };

@@ -1,5 +1,5 @@
-#ifndef PSPG_BASIS_FIELD_STATE_H
-#define PSPG_BASIS_FIELD_STATE_H
+#ifndef PSPG_RGRID_FIELD_STATE_H
+#define PSPG_RGRID_FIELD_STATE_H
 
 /*
 * PSCF - Polymer Self-Consistent Field Theory
@@ -50,20 +50,6 @@ namespace Pspg
       * Precondition: hasSystem() == true
       */
       void allocate();
-
-      /**
-      * Read state from file.
-      *
-      * \param filename name of input w-field file in symmetry-adapted format.
-      */
-      void read(const std::string & filename);
-   
-      /**
-      * Write state to file.
-      *
-      * \param filename name of output file, in symmetry-adapated format.
-      */
-      void write(const std::string & filename);
 
       /**
       * Copy the current state of the associated system.
