@@ -34,6 +34,10 @@ namespace Pspc {
       // Try to match classname
       if (className == "AmIterator") {
          ptr = new AmIterator<D>(*sysPtr_);
+      } else if (className == "SISIterator") {
+          ptr = new SISIterator<D>(*sysPtr_);
+      } else if (className == "MLSISIterator") {
+          
       }
 
       return ptr;
