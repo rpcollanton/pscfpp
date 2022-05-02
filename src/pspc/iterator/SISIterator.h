@@ -73,7 +73,9 @@ namespace Pspc
       int maxItr_;
 
       /// W fields last used to solve the MDEs. Has two components,
-      /// W+ = 1/2*(W_A + W_B) and W- = 1/2*(W_A - W_B)
+      /// W+ = 1/2*(W_A + W_B) (pressure-like field) and 
+      /// W- = 1/2*(W_A - W_B) (exchange field)
+
       DArray<FieldCPU> Wfield_;
 
       /// W fields updated with SIS and average shift
@@ -88,6 +90,14 @@ namespace Pspc
       /// Fourier transformed scattering function, gBB
       FieldCPU gBB_;
 
+      /// Real-space partial functional derivative of the effective
+      /// Hamiltonian with respect to W+
+      FieldCPU partialPlus_;
+
+      /// Real-space partial functional derivative of the effective
+      /// Hamiltonian with respect to W-
+      FieldCPU partialMinus_;
+
       /**
       * Compute the diblock scattering functions.
       */
@@ -99,7 +109,7 @@ namespace Pspc
       * 
       * \param fields An array of fields to be shifted.
       */
-      DArray<FieldCPU> shiftAverageZero(DArray<FieldCPU> fields);
+      void shiftAverageZero(DArray<FieldCPU> & fields);
 
       /**
       * Find the partial functional derivative of the effective
@@ -112,6 +122,22 @@ namespace Pspc
       * Hamiltonian with respect to the W- field.
       */
       FieldCPU findPartialMinus();
+
+      /**
+      * Solve the semi-implicit equation for the next half-step of W+.
+      */
+      FieldCPU stepWPlus();
+
+      /**
+      * Solve the semi-implicit equation for the next half-step of W+.
+      */
+      FieldCPU stepWMinus();
+
+      /**
+      * Update the W fields on the associated system object
+      * with the W fields stored in WfieldUpdate_ 
+      */
+      void updateSystemFields();
 
    };
 
