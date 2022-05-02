@@ -9,6 +9,7 @@
 */
 
 #include <util/global.h>
+#include "SISIterator.h"
 #include <pspc/System.h>
 #include <pscf/inter/ChiInteraction.h>
 
@@ -16,6 +17,14 @@ namespace Pscf {
 namespace Pspc{
 
    using namespace Util;
+
+   template <int D>
+   void SISIterator<D>::readParameters(std::istream& in)
+   {
+       // convergence criterion type
+       // convergence tolerance
+       // max number of iterations
+   }
 
    
 

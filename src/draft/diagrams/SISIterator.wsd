@@ -1,0 +1,53 @@
+@startuml
+
+namespace Pspc {
+   class System<D>
+   class Iterator<D>
+   class IteratorFactory<D>
+   class SISIterator<D>
+}
+
+
+' ' Iterator public
+Pspc.Iterator : + Iterator(System<D>& system)
+Pspc.Iterator : + virtual void setup() = 0
+Pspc.Iterator : + virtual int solve() = 0
+' Iterator : + bool isFlexible() const
+' ' Iterator protected 
+' Iterator : # bool isFlexible_
+Pspc.Iterator : # System<D>& system()
+' Iterator private
+Pspc.Iterator : - System<D>* systemPtr_
+
+' ' SISIterator public
+Pspc.SISIterator : + SISIterator(System<D>& system)
+Pspc.SISIterator : + void setup()
+Pspc.SISIterator : + int solve()
+' ' SISIterator private
+Pspc.SISIterator : - void updateSystem()
+Pspc.SISIterator : - void evaluateScatteringFnc()
+Pspc.SISIterator : - DArray<FieldCPU> shiftAverageZero(DArray<FieldCPU> fields)
+Pspc.SISIterator : - FieldCPU findPartialPlus()
+Pspc.SISIterator : - FieldCPU findPartialMinus()
+' ' SISIterator private members 
+Pspc.SISIterator : - DArray<FieldCPU> Wfield_
+Pspc.SISIterator : - DArray<FieldCPU> WfieldUpdate_
+
+
+
+
+
+' Inheritance and subclassing 
+Util.ParamComposite <|-- Pspc.System
+Util.ParamComposite <|-- Pspc.Iterator
+Pspc.Iterator <|- Pspc.SISIterator
+
+' References
+Pspc.Iterator --> Pspc.System
+Pspc.System --> Pspc.Iterator
+' Composition
+Pspc.System *-> Pspc.IteratorFactory
+
+
+
+@enduml
