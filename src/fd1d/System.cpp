@@ -8,6 +8,7 @@
 #include "System.h"
 
 #include <fd1d/iterator/Iterator.h>
+#include <fd1d/iterator/IteratorFactory.h>
 #include <fd1d/sweep/Sweep.h>
 #include <fd1d/sweep/SweepFactory.h>
 #include <fd1d/iterator/NrIterator.h>
@@ -21,6 +22,7 @@
 #include <util/format/Str.h>
 #include <util/format/Int.h>
 #include <util/format/Dbl.h>
+#include <util/param/BracketPolicy.h>
 
 #include <string>
 #include <unistd.h>
@@ -41,6 +43,7 @@ namespace Fd1d
       homogeneous_(),
       interactionPtr_(0),
       iteratorPtr_(0),
+      iteratorFactoryPtr_(0),
       sweepPtr_(0),
       sweepFactoryPtr_(0),
       wFields_(),
@@ -57,15 +60,33 @@ namespace Fd1d
       setClassName("System"); 
 
       interactionPtr_ = new ChiInteraction(); 
-      iteratorPtr_ = new NrIterator(*this); 
+      iteratorFactoryPtr_ = new IteratorFactory(*this); 
       sweepFactoryPtr_ = new SweepFactory(*this);
+
+      BracketPolicy::set(BracketPolicy::Optional);
    }
 
    /*
    * Destructor.
    */
    System::~System()
-   {}
+   {
+      if (interactionPtr_) {
+         delete interactionPtr_;
+      }
+      if (iteratorPtr_) {
+         delete iteratorPtr_;
+      }
+      if (iteratorFactoryPtr_) {
+         delete iteratorFactoryPtr_;
+      }
+      if (sweepPtr_) {
+         delete sweepPtr_;
+      }
+      if (sweepFactoryPtr_) {
+         delete sweepFactoryPtr_;
+      }
+   }
 
    /*
    * Process command line options.
@@ -163,7 +184,18 @@ namespace Fd1d
       allocateFields();
 
       // Initialize iterator
-      readParamComposite(in, iterator());
+      //readParamComposite(in, iterator());
+
+      // Instantiate and initialize an Iterator 
+      std::string className;
+      bool isEnd;
+      iteratorPtr_ = iteratorFactoryPtr_->readObject(in, *this, 
+                                                     className, isEnd);
+      if (!iteratorPtr_) {
+         std::string msg = "Unrecognized Iterator subclass name ";
+         msg += className;
+         UTIL_THROW(msg.c_str());
+      }
 
       // Optionally instantiate a Sweep object
       readOptional<bool>(in, "hasSweep", hasSweep_);
@@ -244,8 +276,7 @@ namespace Fd1d
             readNext = false;
          } else
          if (command == "READ_W") {
-            inBuffer >> filename;
-            Log::file() << "  " << Str(filename, 20) << std::endl;
+            readEcho(inBuffer, filename);
             fieldIo.readFields(wFields(), filename);  
          } else
          if (command == "ITERATE") {
@@ -269,24 +300,20 @@ namespace Fd1d
             sweepPtr_->sweep();
          } else 
          if (command == "WRITE_W") {
-            inBuffer >> filename;
-            Log::file() << "  " << Str(filename, 20) << std::endl;
+            readEcho(inBuffer, filename);
             fieldIo.writeFields(wFields(), filename);  
          } else
          if (command == "WRITE_C") {
-            inBuffer >> filename;
-            Log::file() << "  " << Str(filename, 20) << std::endl;
+            readEcho(inBuffer, filename);
             fieldIo.writeFields(cFields(), filename);  
          } else
          if (command == "WRITE_BLOCK_C") {
-            inBuffer >> filename;
-            Log::file() << "  " << Str(filename, 20) << std::endl;
+            readEcho(inBuffer, filename);
             fieldIo.writeBlockCFields(filename);  
          } else
          if (command == "WRITE_VERTEX_Q") {
+            readEcho(inBuffer, filename);
             int polymerId, vertexId;
-            inBuffer >> filename;
-            Log::file() << "  " << Str(filename, 20) << std::endl;
             inBuffer >> polymerId;
             Log::file() << "polymerId = " 
                         << Int(polymerId, 5) << std::endl;
@@ -329,6 +356,15 @@ namespace Fd1d
          UTIL_THROW("Empty command file name");
       }
       readCommands(fileMaster().commandFile()); 
+   }
+
+   /*
+   * Read a string (e.g., a filename) and echo to the log file.
+   */
+   void System::readEcho(std::istream& in, std::string& string) const
+   {
+      in >> string;
+      Log::file() << "  " << Str(string, 20) << std::endl;
    }
 
    /*
@@ -417,57 +453,6 @@ namespace Fd1d
       }
 
    }
-
-   #if 0
-   void System::readWFields(std::istream &in)
-   {
-      UTIL_CHECK(hasDomain_);
-
-      // Read grid dimensions
-      std::string label;
-      int nx, nm;
-      in >> label;
-      UTIL_CHECK(label == "nx");
-      in >> nx;
-      UTIL_CHECK(nx > 0);
-      UTIL_CHECK(nx == domain().nx());
-      in >> label;
-      UTIL_CHECK (label == "nm");
-      in >> nm;
-      UTIL_CHECK(nm > 0);
-      UTIL_CHECK(nm == mixture().nMonomer());
-
-      // Read fields
-      int i,j, idum;
-      for (i = 0; i < nx; ++i) {
-         in >> idum;
-         UTIL_CHECK(idum == i);
-         for (j = 0; j < nm; ++j) {
-            in >> wFields_[j][i];
-         }
-      }
-
-   }
-
-   void System::writeFields(std::ostream &out, 
-                            Array<Field> const &  fields)
-   {
-      int i, j;
-      int nx = domain().nx();
-      int nm = mixture().nMonomer();
-      out << "nx     "  <<  nx              << std::endl;
-      out << "nm     "  <<  nm              << std::endl;
-
-      // Write fields
-      for (i = 0; i < nx; ++i) {
-         out << Int(i, 5);
-         for (j = 0; j < nm; ++j) {
-            out << "  " << Dbl(fields[j][i], 18, 11);
-         }
-         out << std::endl;
-      }
-   }
-   #endif
 
    void System::initHomogeneous()
    {

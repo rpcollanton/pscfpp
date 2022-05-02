@@ -1,0 +1,7 @@
+(cd fd; ./clean)
+(cd pc; ./clean)
+(cd pg/diblock; ./clean)
+rm -f */*/*/out/*
+rm -f */*/*/*/out/*
+rm -f */*/*/*/*/out/*
+

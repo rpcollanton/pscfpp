@@ -24,6 +24,7 @@ namespace Fd1d
 {
 
    class Iterator;
+   class IteratorFactory;
    class Sweep;
    class SweepFactory;
    using namespace Util;
@@ -31,6 +32,7 @@ namespace Fd1d
    /**
    * Main class in SCFT simulation of one system.
    *
+   * \ref fd1d_System_page "Parameter File Format"
    * \ingroup Pscf_Fd1d_Module
    */
    class System : public ParamComposite
@@ -233,12 +235,17 @@ namespace Fd1d
       Iterator* iteratorPtr_;
 
       /**
+      * Pointer to associated Iterator factory.
+      */
+      IteratorFactory* iteratorFactoryPtr_;
+
+      /**
       * Pointer to associated Sweep object
       */
       Sweep* sweepPtr_;
 
       /**
-      * Pointer to associated Sweep object
+      * Pointer to associated Sweep factory.
       */
       SweepFactory* sweepFactoryPtr_;
 
@@ -305,6 +312,14 @@ namespace Fd1d
       * Initialize Homogeneous::Mixture object.
       */
       void initHomogeneous();
+
+      /**
+      * Read a string (e.g., a filename) and echo it to the log file.
+      *
+      * \param in  input stream from which to read
+      * \param string  string variable to read and echo
+      */
+      void readEcho(std::istream& in, std::string& string) const;
 
    };
 
