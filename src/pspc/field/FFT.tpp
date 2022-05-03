@@ -81,6 +81,10 @@ namespace Pspc
          UTIL_CHECK(rDimensions[i] > 0);
          meshDimensions_[i] = rDimensions[i];
          rSize_ *= rDimensions[i];
+         // Note: the below logic is due to the convention described on 
+         // fftw.org for storing only half of the transformed array due 
+         // to symmetry in the k-space array resulting from the r-space 
+         // input array being pure real.
          if (i < D - 1) {
             kSize_ *= rDimensions[i];
          } else {

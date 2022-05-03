@@ -115,6 +115,9 @@ namespace Pspc
    template <int D>
    void RFieldDft<D>::allocate(IntVec<D> const & meshDimensions)
    {
+      // Note that because of symmetry in the fourier space array (after
+      // performing an FFT), only need to store half of it. FFTW 
+      // convention is to cut the size in the last dimension in half 
       int size = 1;
       for (int i = 0; i < D; ++i) {
          UTIL_CHECK(meshDimensions[i] > 0);
