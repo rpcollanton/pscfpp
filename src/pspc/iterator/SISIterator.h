@@ -78,10 +78,10 @@ namespace Pspc
       /// W+ = 1/2*(W_A + W_B) (pressure-like field) and 
       /// W- = 1/2*(W_A - W_B) (exchange field)
 
-      DArray<RField<D>> Wfield_;
+      DArray<RField<D>> Wfields_;
 
       /// W fields updated with SIS and average shift
-      DArray<RField<D>> WfieldUpdate_;
+      DArray<RField<D>> WfieldsUpdate_;
 
       /// Fourier transformed scattering function, gAA
       RFieldDft<D> gAA_;

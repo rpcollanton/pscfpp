@@ -42,13 +42,13 @@ namespace Pspc{
                         single-component diblock copolymer melts")
       }
       
-      // Allocate real-space arrays. Note that wField_[0] does not
+      // Allocate real-space arrays. Note that Wfields_[0] does not
       // correspond with the chemical potential field of monomer 0, and is 
-      // rather W+ = 1/2*(W_A + W_B). wField_[1] = W- = 1/2*(W_A - W_B)
-      wField_.allocate(nField);
+      // rather W+ = 1/2*(W_A + W_B). Wfields_[1] = W- = 1/2*(W_A - W_B)
+      Wfields_.allocate(nField);
       wFieldUpdate_.allocate(nField);
       for (int i = 0; i < nField; i++) {
-         wField_[i].allocate(meshDim)
+         Wfields_[i].allocate(meshDim)
          wFieldUpdate_[i].allocate(meshDim);
       }
       partialPlus_.allocate(meshDim);
@@ -69,7 +69,7 @@ namespace Pspc{
 
       // Solve MDE for initial state and get the W fields 
       system().compute();
-      Wfield_ = getWFields();
+      Wfields_ = getWFields();
 
       // Iterative loop 
       bool done;
@@ -156,6 +156,12 @@ namespace Pspc{
          }
          
          // find k norm by summing up over dimensions
+         // Note: fftw.org says about the frequency at array position k 
+         // that the actual frequnecy is equal to k/T where T is the 
+         // periodicity in that dimension in real space. Because our 
+         // arrays are periodic with the unit cell parameter in each
+         // direction, I (Ryan) assumed that this was the cell parameter.
+
          double ksq = 0;
          for (int d = 0; d < D; d++) {
             ksq += pow((double)coord[d]/cellParam[d],2);
@@ -198,13 +204,37 @@ namespace Pspc{
    template <int D>
    RField<D> SISIterator<D>::findPartialPlus()
    {
+      // Get system data
+      const RField<D> * CFields = system().cFields();
+      // Allocate temporary array
+      RField<D> temp;
+      temp.allocate((*CFields)[0].meshDimensions());
+      // Compute functional derivative
+      for (i = 0; i < temp.capacity(); i++) { 
+         temp[i] = (*CFields)[0][i] + (*CFields)[1][i] - 1
+      }
 
+      return temp;
    }
 
    template <int D>
    RField<D> SISIterator<D>::findPartialMinus()
    {
+      // Get system data
+      const RField<D> * CFields = system().cFields();
+      const double chiN = system().interaction().chi(0,1) * 
+                           system().mixture().polymer(0).length();
+      const double f = system().mixture().polymer(0).block(0).length() / 
+                        system().mixture().polymer(0).length();
+      // Allocate temporary array 
+      RField<D> temp;
+      temp.allocate((*CFields)[0].meshDimensions());
+      // Compute functional derivative
+      for (i = 0; i < temp.capacity(); i++) { 
+         temp[i] = (2*f - 1) + 2/chiN * Wfields_[1][i] - ((*CFields)[0][i] - (*CFields)[1][i]);
+      }
 
+      return temp;
    }
 
    template <int D>
