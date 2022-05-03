@@ -9,6 +9,8 @@
 */
 
 #include "Iterator.h"
+#include <pspc/field/RFieldDft.h>
+#include <pspc/field/RField.h>
 
 namespace Pscf {
 namespace Pspc
@@ -76,27 +78,27 @@ namespace Pspc
       /// W+ = 1/2*(W_A + W_B) (pressure-like field) and 
       /// W- = 1/2*(W_A - W_B) (exchange field)
 
-      DArray<FieldCPU> Wfield_;
+      DArray<RField<D>> Wfield_;
 
       /// W fields updated with SIS and average shift
-      DArray<FieldCPU> WfieldUpdate_;
+      DArray<RField<D>> WfieldUpdate_;
 
       /// Fourier transformed scattering function, gAA
-      FieldCPU gAA_;
+      RFieldDft<D> gAA_;
 
       /// Fourier transformed scattering function, gAB
-      FieldCPU gAB_;
+      RFieldDft<D> gAB_;
 
       /// Fourier transformed scattering function, gBB
-      FieldCPU gBB_;
+      RFieldDft<D> gBB_;
 
       /// Real-space partial functional derivative of the effective
       /// Hamiltonian with respect to W+
-      FieldCPU partialPlus_;
+      RField<D> partialPlus_;
 
       /// Real-space partial functional derivative of the effective
       /// Hamiltonian with respect to W-
-      FieldCPU partialMinus_;
+      RField<D> partialMinus_;
 
       /**
       * Compute the diblock scattering functions.
@@ -109,29 +111,35 @@ namespace Pspc
       * 
       * \param fields An array of fields to be shifted.
       */
-      void shiftAverageZero(DArray<FieldCPU> & fields);
+      void shiftAverageZero(DArray<RField<D>> & fields);
 
       /**
       * Find the partial functional derivative of the effective
       * Hamiltonian with respect to the W+ field.
       */
-      FieldCPU findPartialPlus();
+      RField<D> findPartialPlus();
 
       /**
       * Find the partial functional derivative of the effective
       * Hamiltonian with respect to the W- field.
       */
-      FieldCPU findPartialMinus();
+      RField<D> findPartialMinus();
 
       /**
       * Solve the semi-implicit equation for the next half-step of W+.
       */
-      FieldCPU stepWPlus();
+      RField<D> stepWPlus();
 
       /**
       * Solve the semi-implicit equation for the next half-step of W+.
       */
-      FieldCPU stepWMinus();
+      RField<D> stepWMinus();
+
+      /**
+      * Get the current W fields on the system, and convert W_A and W_B
+      * to W+ and W- (in that order). Output them. 
+      */
+      DArray<RField<D>> getWFields();
 
       /**
       * Update the W fields on the associated system object
