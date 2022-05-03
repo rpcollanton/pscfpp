@@ -22,9 +22,11 @@ namespace Pspc{
    template <int D>
    void SISIterator<D>::readParameters(std::istream& in)
    {
-       // convergence criterion type
-       // convergence tolerance
-       // max number of iterations
+      // convergence criterion type
+      // max number of iterations
+      read(in, "maxItr", maxItr_);
+      // convergence tolerance
+      read(in, "epsilon", epsilon_);
    }
 
    template <int D>
@@ -46,10 +48,10 @@ namespace Pspc{
       // correspond with the chemical potential field of monomer 0, and is 
       // rather W+ = 1/2*(W_A + W_B). Wfields_[1] = W- = 1/2*(W_A - W_B)
       Wfields_.allocate(nField);
-      wFieldUpdate_.allocate(nField);
+      WfieldsUpdate_.allocate(nField);
       for (int i = 0; i < nField; i++) {
          Wfields_[i].allocate(meshDim)
-         wFieldUpdate_[i].allocate(meshDim);
+         WfieldsUpdate_[i].allocate(meshDim);
       }
       partialPlus_.allocate(meshDim);
       partialMinus_.allocate(meshDim);
@@ -76,7 +78,7 @@ namespace Pspc{
       for (int itr = 0; itr < maxItr_; ++itr) {
          
          // Compute error and test it with an isConverged function
-         // COMPUTE ERROR FUNCTION
+         done = isConverged();
 
          // Do stuff if error is low enough
          if (done) {
@@ -87,7 +89,7 @@ namespace Pspc{
             // NOTE: This next block of code will likely, in a generalized algorithm,
             // be inside of a loop over the number of monomers (number of W fields).
             // Each step would use the (j+1/2) of all fields previous and (j) of the
-            // current field, in a Gauss-Siedel fashion. We would need a generalized
+            // current field, in a Gauss-Seidel fashion. We would need a generalized
             // "findPartial" function that depends only on the coefficient matrix to 
             // transfrom from one set of fields to another
 
@@ -95,7 +97,7 @@ namespace Pspc{
             partialPlus_ = findPartialPlus();
             
             // Solve the first semi-implicit equation for W+ (j+1/2)
-            WfieldUpdate_[0] = stepWPlus();
+            WfieldsUpdate_[0] = stepWPlus();
 
             // Update system with these updated fields and re-solve MDEs
             updateSystemFields();
@@ -105,16 +107,15 @@ namespace Pspc{
             partialMinus_ = findPartialMinus();
 
             // Solve the second semi-implicit equation for W- (j+1/2)
-            WfieldUpdate_[1] = stepWMinus();
+            WfieldsUpdate_[1] = stepWMinus();
 
             // Complete the full step by shifting the spatial average to zero
-            shiftAverageZero(WFieldUpdate_)
+            shiftAverageZero(WfieldsUpdate_)
 
             // Update system and solve MDEs
-            updateSystemFields();
+            updateSystemFields(WfieldsUpdate_);
             system().compute();
          }
-
 
       }
 
@@ -204,7 +205,11 @@ namespace Pspc{
    template <int D>
    RField<D> SISIterator<D>::findPartialPlus()
    {
-      // Get system data
+      // NOTE: Assumes that the MDEs were most recently solved on the 
+      // system using the fields in Wfields_. Otherwise, this 
+      // functional derivative is incorrect.
+
+      // Get system data.
       const RField<D> * CFields = system().cFields();
       // Allocate temporary array
       RField<D> temp;
@@ -220,6 +225,10 @@ namespace Pspc{
    template <int D>
    RField<D> SISIterator<D>::findPartialMinus()
    {
+      // NOTE: Assumes that the MDEs were most recently solved on the 
+      // system using the fields in Wfields_. Otherwise, this 
+      // functional derivative is incorrect.
+
       // Get system data
       const RField<D> * CFields = system().cFields();
       const double chiN = system().interaction().chi(0,1) * 
@@ -241,6 +250,8 @@ namespace Pspc{
    RField<D> SISIterator<D>::stepWPlus()
    {
       // do FFT, solve in fourier space, FFT-inverse back
+      // NOTE: How this (and its minus counterpart) are done will determine if
+      // we need both Wfields_ and WfieldsUpdate_. Hopefully we don't!
    }
 
    template <int D>
@@ -255,6 +266,43 @@ namespace Pspc{
    {
       // get W fields, add/subtract to get W+ and W-, convert
       // to long vector format (can do we do this? should be able to)
+   }
+
+   template <int D>
+   bool SISIterator<D>::isConverged() {
+
+      double errorPlus, errorMinus, error;
+
+      // Compute partial functional derivatives. Note: may be able to 
+      // simplify this and do it fewer places! (they are already being computed
+      // at each step of the algorithm...)
+      RField<D> partialPlus = findPartialPlus();
+      RField<D> partialMinus = findPartialMinus();
+
+      // These should be zero if converged. Assess how close they are
+      // to zero, depending on error type.
+
+      // FOR NOW: default to maximum element. easy.
+      errorPlus = 0;
+      errorMinus = 0;
+      for (int i = 0; i < partialPlus.capacity(); i++) {
+         if (abs(partialPlus[i]) > errorPlus)
+            errorPlus = abs(partialPlus[i]);
+         if (abs(partialMinus[i]) > errorMinus) 
+            errorMinus = abs(partialMinus[i]);
+
+         if (errorMinus > errorPlus)
+            error = errorMinus;
+         else
+            error = errorPlus;
+      }
+      
+      if (errorMinus > errorPlus)
+         error = errorMinus;
+      else
+         error = errorPlus;
+
+      return error < epsilon_;
    }
 
    template <int D>
