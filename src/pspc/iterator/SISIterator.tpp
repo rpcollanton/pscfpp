@@ -27,6 +27,8 @@ namespace Pspc{
       read(in, "maxItr", maxItr_);
       // convergence tolerance
       read(in, "epsilon", epsilon_);
+      // pseudo-time step size
+      read(in, "timeStep", dt_);
    }
 
    template <int D>
@@ -49,12 +51,12 @@ namespace Pspc{
       // rather W+ = 1/2*(W_A + W_B). Wfields_[1] = W- = 1/2*(W_A - W_B)
       Wfields_.allocate(nField);
       WfieldsUpdate_.allocate(nField);
+      partialDeriv_.allocate(nField);
       for (int i = 0; i < nField; i++) {
          Wfields_[i].allocate(meshDim)
          WfieldsUpdate_[i].allocate(meshDim);
+         partialDeriv_.allocate(meshDim);
       }
-      partialPlus_.allocate(meshDim);
-      partialMinus_.allocate(meshDim);
       
       // Allocate k-space arrays
       gAA_.allocate(meshDim);
@@ -94,20 +96,20 @@ namespace Pspc{
             // transfrom from one set of fields to another
 
             // Find the functional derivative with respect to W+ 
-            partialPlus_ = findPartialPlus();
+            partialDeriv_[0] = findPartialPlus();
             
             // Solve the first semi-implicit equation for W+ (j+1/2)
-            WfieldsUpdate_[0] = stepWPlus();
+            WfieldsUpdate_[0] = stepWPlus(Wfields_[0], partialDeriv_[0]);
 
             // Update system with these updated fields and re-solve MDEs
-            updateSystemFields();
+            updateSystemFields(WFieldsUpdate_);
             system().compute();
 
             // Find the functional derivative with respect to W-.
-            partialMinus_ = findPartialMinus();
+            partialDeriv_[1] = findPartialMinus();
 
             // Solve the second semi-implicit equation for W- (j+1/2)
-            WfieldsUpdate_[1] = stepWMinus();
+            WfieldsUpdate_[1] = stepWMinus(Wfields_[1], partialDeriv_[1]);;
 
             // Complete the full step by shifting the spatial average to zero
             shiftAverageZero(WfieldsUpdate_)
@@ -247,18 +249,62 @@ namespace Pspc{
    }
 
    template <int D>
-   RField<D> SISIterator<D>::stepWPlus()
+   RField<D> SISIterator<D>::stepWPlus(const RField<D> & WPlus, const RField<D> & partialPlus)
    {
       // do FFT, solve in fourier space, FFT-inverse back
       // NOTE: How this (and its minus counterpart) are done will determine if
       // we need both Wfields_ and WfieldsUpdate_. Hopefully we don't!
+      const IntVec<D> meshDim = system().mesh().dimensions();
+
+      // FFT of current W+ field
+      RFieldDFT<D> WPlusDFT;
+      WPlusDFT.allocate(meshDim);
+      system().fft().forwardTransform(WPlus,WPlusDFT);
+
+      // FFT of current functional derivative of H wrt W+
+      RFieldDft<D> partialPlusDFT;
+      partialPlusDFT.allocate(meshDim);
+      system().fft().forwardTransform(partialPlus,partialPlusDFT);
+
+      // FFT of updated field
+      RFieldDFT<D> WPlusUpdateDFT;
+      WPlusUpdateDFT.allocate(meshDim);
+      
+      // Compute fourier transform of updated field
+      // Determine actual dft mesh size, accounting for it being cut in half
+      const IntVec<D> dftDim = WPlusDFT.dftDimensions();
+      int size = 1;
+      for (int d = 0; d < D; d++) {
+         dftSize*=dftDim[d];
+      }
+      for (int i = 0; i < dftSize i++) {
+         WPlusUpdateDFT[i] = WPlusDFT[i] + dt/(1 + dt*(gAA_[i] + gBB_[i] + 2*gAB_[i]))*partialPlusDFT[i];
+      }
+
+      RField<D> WPlusUpdate;
+      WPlusUpdate.allocate(meshDim);
+      system().fft().inverseTransform(WPlusUpdateDFT,WPlusUpdate);
+      
+      return WPlusUpdate;
    }
 
    template <int D>
-   RField<D> SISIterator<D>::stepWMinus()
+   RField<D> SISIterator<D>::stepWMinus(const RField<D> & WMinus, const RField<D> & partialMinus)
    {
-      // solve algebraically (FFT-inverse of g fncs...)
+      // solve algebraically
+      const IntVec<D> meshDim = system().mesh().dimensions();
+      const double chiN = system().interaction().chi(0,1) * 
+                           system().mixture().polymer(0).length();
 
+
+      RField<D> WMinusUpdate;
+      WMinusUpdate.allocate(meshDim);
+
+      for (int i = 0; i < WMinusUpdate.capacity(); i++) {
+         WMinusUpdate[i] = WMinus[i] - dt/(1+dt*2/chiN) * partialMinus[i];
+      }
+
+      return WMinusUpdate;
    }
 
    template <int D>
@@ -266,6 +312,13 @@ namespace Pspc{
    {
       // get W fields, add/subtract to get W+ and W-, convert
       // to long vector format (can do we do this? should be able to)
+      const int nx = Wfields_[0].capacity();
+
+      for (int i = 0; i < nx; i++) {
+         Wfields_[0][i] = 1/2*( system().wFieldRGrid(0)[i] + system().wFieldRGrid(1)[i] );
+         Wfields_[1][i] = 1/2*( system().wFieldRGrid(1)[i] - system().wFieldRGrid(0)[i] );
+      }
+      
    }
 
    template <int D>
@@ -308,7 +361,21 @@ namespace Pspc{
    template <int D>
    void SISIterator<D>::updateSystemFields()
    {
-      
+      const int nx = Wfields_[0].capacity();
+      const int nMon = WFields_.capacity();
+
+      DArray<System<D>::WField> Wupdate;
+
+      Wupdate.allocate(nMon);
+      for (int n = 0; n < nMon; n++) {
+         Wupdate.allocate(nx);
+      }
+      for (int i = 0; i < nx; i++) {
+         Wupdate[0][i] = WfieldsUpdate_[0][i] - WfieldsUpdate_[1][i];
+         Wupdate[1][i] = WfieldsUpdate_[0][i] + WfieldsUpdate_[1][i];
+      }
+      system().setWRgrid(Wupdate);
+
    }
    
 

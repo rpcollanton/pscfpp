@@ -73,6 +73,9 @@ using namespace Util;
         /// Maximum number of iterations to attempt
         int maxItr_;
 
+        /// Time step size
+        double dt_;
+
         /// W fields last used to solve the MDEs. Has two components,
         /// W+ = 1/2*(W_A + W_B) (pressure-like field) and 
         /// W- = 1/2*(W_A - W_B) (exchange field)
@@ -91,13 +94,9 @@ using namespace Util;
         /// Fourier transformed scattering function, gBB
         RFieldDft<D> gBB_;
 
-        /// Real-space partial functional derivative of the effective
-        /// Hamiltonian with respect to W+
-        RField<D> partialPlus_;
-
-        /// Real-space partial functional derivative of the effective
-        /// Hamiltonian with respect to W-
-        RField<D> partialMinus_;
+        /// Real-space partial functional derivative ofs the effective
+        /// Hamiltonian with respect to the transformed W fields
+        DArray<RField<D>> partialDeriv_;
 
         /**
         * Compute the diblock scattering functions.
@@ -127,12 +126,12 @@ using namespace Util;
         /**
         * Solve the semi-implicit equation for the next half-step of W+.
         */
-        RField<D> stepWPlus();
+        RField<D> stepWPlus(const RField<D> & WPlus, const RField<D> & partialPlus);
 
         /**
         * Solve the semi-implicit equation for the next half-step of W+.
         */
-        RField<D> stepWMinus();
+        RField<D> stepWMinus(const RField<D> & WMinus, const RField<D> & partialMinus);
 
         /**
         * Get the current W fields on the system, and convert W_A and W_B
@@ -149,7 +148,7 @@ using namespace Util;
 
         /**
          * Update the W fields on the associated system object
-         * with the W fields stored in WfieldUpdate_ 
+         * with the W fields stored in WfieldsUpdate_ 
          */
         void updateSystemFields();
 
