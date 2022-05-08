@@ -83,9 +83,6 @@ using namespace Util;
 
         DArray<RField<D>> Wfields_;
 
-        /// W fields updated with SIS and average shift
-        DArray<RField<D>> WfieldsUpdate_;
-
         /// Fourier transformed scattering function, gAA
         RFieldDft<D> gAA_;
 
@@ -121,7 +118,7 @@ using namespace Util;
         * Find the partial functional derivative of the effective
         * Hamiltonian with respect to the W- field.
         */
-        RField<D> findPartialMinus();
+        RField<D> findPartialMinus(const RField<D> & WMinus);
 
         /**
         * Solve the semi-implicit equation for the next half-step of W+.
@@ -148,9 +145,9 @@ using namespace Util;
 
         /**
          * Update the W fields on the associated system object
-         * with the W fields stored in WfieldsUpdate_ 
+         * with the W fields stored in WfieldsUpdate 
          */
-        void updateSystemFields();
+        void updateSystemFields(const DArray<RField<D>> & WfieldsUpdate);
 
     };
 
