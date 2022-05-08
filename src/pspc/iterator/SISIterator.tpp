@@ -20,6 +20,15 @@ namespace Pspc{
    using namespace Util;
 
    template <int D>
+   SISIterator<D>::SISIterator(System<D>& system)
+   : Iterator<D>(system)
+   {}
+
+   template <int D>
+   SISIterator<D>::~SISIterator()
+   {}
+
+   template <int D>
    void SISIterator<D>::readParameters(std::istream& in)
    {
       // convergence criterion type
@@ -72,18 +81,21 @@ namespace Pspc{
 
       // Solve MDE for initial state and get the W fields 
       system().compute();
-      Wfields_ = getWFields();
+      getWFields(Wfields_);
 
       // Iterative loop 
       bool done;
       for (int itr = 0; itr < maxItr_; ++itr) {
+
+         Log::file()<<"---------------------"<<std::endl;
+         Log::file()<<" Iteration  "<<itr<<std::endl;
          
          // Compute error and test it with an isConverged function
          done = isConverged();
 
          // Do stuff if error is low enough
          if (done) {
-
+            Log::file() << "----------CONVERGED----------"<< std::endl;
             return 0;
 
          } else {
@@ -138,23 +150,47 @@ namespace Pspc{
       const double f = system().mixture().polymer(0).block(0).length() / 
                        system().mixture().polymer(0).length();
       
+      // Expand out cell parameters because we need to use them in each direction
+      FSArray<double,D> cellLengths;
+      for (int i = 0; i < D; i++) {
+         if (cellParam[i] < 1E-10) {
+            cellLengths[i] = cellLengths[i-1];
+         } else {
+            cellLengths[i] = cellParam[i];
+         }
+         std::cout << "cell length " << i << " " << cellLengths[i] << std::endl;
+      }
+
+      // Manually set k=0 components using limit of expresion as k goes to 0
+      gAA_[0][0] = f*f;
+      gAB_[0][0] = (1-f)*f;
+      gBB_[0][0] = (1-f)*(1-f);
+      
       // Determine actual dft mesh size, accounting for it being cut in half
       int dftSize = 1;
       for (int d = 0; d < D; d++) {
          dftSize*=dftDim[d];
       }
-      
-      for (int i = 0; i < dftSize; i++) {
+
+      for (int i = 1; i < dftSize; i++) {
          int temp = i;
          int sizeSlice = dftSize/dftDim[D-1];
          IntVec<D> coord;
-         coord[D-1] = dftSize % sizeSlice;
-         
+         // last case is special
+         if (sizeSlice != 1) 
+            coord[D-1] = temp % sizeSlice;
+         else 
+            coord[D-1] = temp;
+
          // For each dimension, determine coordinate in k-space array
-         for (int d = D-2; d >= 0; d++) {
+         for (int d = D-2; d >= 0; d--) {
             temp -= coord[d+1]*sizeSlice;
             sizeSlice = dftSize/dftDim[d];
-            coord[d] = temp % sizeSlice;
+            // last case is special 
+            if (sizeSlice != 1) 
+               coord[d] = temp % sizeSlice;
+            else 
+               coord[d] = temp;
          }
          
          // find k norm by summing up over dimensions
@@ -163,17 +199,18 @@ namespace Pspc{
          // periodicity in that dimension in real space. Because our 
          // arrays are periodic with the unit cell parameter in each
          // direction, I (Ryan) assumed that this was the cell parameter.
-
          double ksq = 0;
          for (int d = 0; d < D; d++) {
-            ksq += pow((double)coord[d]/cellParam[d],2);
+            ksq += pow((double)coord[d]/cellLengths[d],2);
          }
          double k = pow(ksq,0.5);
-         
+         std::cout << "i = " << i << " coord[0] = " << coord[0] << std::endl;
+         std::cout << "i = " << i << "   k[i] = " << k << std::endl;
          // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
          gAA_[i][0] = 2/pow(k,4) * (f*pow(k,2) + exp(-pow(k,2)*f) - 1);
          gAB_[i][0] = 1/pow(k,4) * (1 - exp(-pow(k,2)*f))*(1 - exp(-pow(k,2)*(1-f)));
          gBB_[i][0] = 2/pow(k,4) * ( (1-f)*pow(k,2) + exp(-pow(k,2)*(1-f)) - 1);
+         std::cout << "i = " << i << "   gAA_[i] = " << gAA_[i][0] << "   gAB_[i] = " << gAB_[i][0] << "   gBB_[i] = " << gBB_[i][0] << std::endl;
       }
       
    }
@@ -196,7 +233,7 @@ namespace Pspc{
 
          // subtract average from field
          for (int j = 0; j < n; j++) {
-            fields[i][j] += fields[i][j]/n;
+            fields[i][j] -= avg;
          }
       }
 
@@ -279,12 +316,16 @@ namespace Pspc{
       // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
       for (int i = 0; i < dftSize; i++) {
          WPlusUpdateDFT[i][0] = WPlusDFT[i][0] + dt_/(1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0] ))*partialPlusDFT[i][0];
+         std::cout << "k-space Wplus " << i << ":  " << WPlusDFT[i][0] << std::endl;
+         std::cout << "k-space denom " << i << ":  " << (1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0] )) << std::endl;
+         std::cout << "k-space Wplus update " << i << ":  " << WPlusUpdateDFT[i][0] << std::endl;
+         std::cout << "k-space partial plus " << i << ":  " << partialPlusDFT[i][0] << std::endl;
       }
 
       RField<D> WPlusUpdate;
       WPlusUpdate.allocate(meshDim);
       system().fft().inverseTransform(WPlusUpdateDFT,WPlusUpdate);
-      
+
       return WPlusUpdate;
    }
 
@@ -308,26 +349,18 @@ namespace Pspc{
    }
 
    template <int D>
-   DArray<RField<D>> SISIterator<D>::getWFields()
+   void SISIterator<D>::getWFields(DArray<RField<D>> & Wfields)
    {
       // get W fields, add/subtract to get W+ and W-, convert
       // to long vector format (can do we do this? should be able to)
-      const int nx = Wfields_[0].capacity();
-      const int nMon = Wfields_.capacity();
-
-      DArray<RField<D>> Wfields;
-      Wfields.allocate(nMon);
-      for (int n = 0; n < nMon; n++) {
-         Wfields[n].allocate(nx);
-      }
+      const int nx = Wfields[0].capacity();
       
       for (int i = 0; i < nx; i++) {
-         Wfields[0][i] = 1/2*( system().wFieldRGrid(0)[i] + system().wFieldRGrid(1)[i] );
-         Wfields[1][i] = 1/2*( system().wFieldRGrid(1)[i] - system().wFieldRGrid(0)[i] );
+         Wfields[0][i] = 0.5*( system().wFieldRGrid(0)[i] + system().wFieldRGrid(1)[i] );
+         Wfields[1][i] = 0.5*( system().wFieldRGrid(1)[i] - system().wFieldRGrid(0)[i] );
       }
 
-      return Wfields;
-      
+      return;
    }
 
    template <int D>
@@ -358,6 +391,9 @@ namespace Pspc{
          else
             error = errorPlus;
       }
+
+      Log::file() << "Max Error (Pressure) = " << errorPlus << std::endl;
+      Log::file() << "Max Error (Exchange) = " << errorMinus << std::endl;
       
       if (errorMinus > errorPlus)
          error = errorMinus;
@@ -382,6 +418,7 @@ namespace Pspc{
       for (int i = 0; i < nx; i++) {
          Wupdate[0][i] = WfieldsUpdate_[0][i] - WfieldsUpdate_[1][i];
          Wupdate[1][i] = WfieldsUpdate_[0][i] + WfieldsUpdate_[1][i];
+         //std::cout << "Pressure:    " << WfieldsUpdate_[0][i] << "     Exchange:    " << WfieldsUpdate_[1][i] << std::endl;
       }
       system().setWRGrid(Wupdate);
 

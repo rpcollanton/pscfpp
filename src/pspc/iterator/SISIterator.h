@@ -105,9 +105,8 @@ using namespace Util;
         void evaluateScatteringFnc();
 
         /**
-        * Shift the average of each field in an array of fields
-        * to 0.
-        * 
+        * Shift the average of each field in an array of fields to 0.
+        *  
         * \param fields An array of fields to be shifted.
         */
         void shiftAverageZero(DArray<RField<D>> & fields);
@@ -138,7 +137,7 @@ using namespace Util;
         * Get the current W fields on the system, and convert W_A and W_B
         * to W+ and W- (in that order). Output them. 
         */
-        DArray<RField<D>> getWFields();
+        void getWFields(DArray<RField<D>> & Wfields);
 
         /**
         * Checks if the system is converged by comparing the self-consistency
