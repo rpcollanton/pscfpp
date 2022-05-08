@@ -393,13 +393,13 @@ namespace Pspc
             writeCRGrid(filename);
          } else
          if (command == "WRITE_PROPAGATOR") {
-            int polymerID, blockID;
+            int polymerId, blockId;
             readEcho(in, filename);
-            in >> polymerID;
-            in >> blockID;
-            Log::file() << Str("polymer ID   ", 21) << polymerID << "\n"
-                        << Str("block ID   ", 21) << blockID << std::endl;
-            writePropagatorRGrid(filename, polymerID, blockID);
+            in >> polymerId;
+            in >> blockId;
+            Log::file() << Str("polymer ID   ", 21) << polymerId << "\n"
+                        << Str("block ID   ", 21) << blockId << std::endl;
+            writePropagatorRGrid(filename, polymerId, blockId);
          } else
          if (command == "BASIS_TO_RGRID") {
             readEcho(in, inFileName);
@@ -483,7 +483,9 @@ namespace Pspc
             mu = polymerPtr->mu();
             length = polymerPtr->length();
             // Recall: mu = ln(phi/q)
-            fHelmholtz_ += phi*( mu - 1.0 )/length;
+            if (phi > 1E-08) {
+               fHelmholtz_ += phi*( mu - 1.0 )/length;
+            }
          }
       }
 
@@ -496,7 +498,9 @@ namespace Pspc
             phi = solventPtr->phi();
             mu = solventPtr->mu();
             size = solventPtr->size();
-            fHelmholtz_ += phi*( mu - 1.0 )/size;
+            if (phi > 1E-08) {
+               fHelmholtz_ += phi*( mu - 1.0 )/size;
+            }
          }
       }
 
@@ -536,7 +540,9 @@ namespace Pspc
             phi = polymerPtr->phi();
             mu = polymerPtr->mu();
             length = polymerPtr->length();
-            pressure_ += mu * phi /length;
+            if (phi > 1E-08) {
+               pressure_ += mu * phi /length;
+            }
          }
       }
 
@@ -549,7 +555,9 @@ namespace Pspc
             phi = solventPtr->phi();
             mu = solventPtr->mu();
             size = solventPtr->size();
-            pressure_ += mu * phi /size;
+            if (phi > 1E-08) {
+               pressure_ += mu * phi /size;
+            }
          }
       }
 
@@ -894,11 +902,11 @@ namespace Pspc
    */
    template <int D>
    void System<D>::writePropagatorRGrid(const std::string & filename, 
-                                        int polymerID, int blockID) 
+                                        int polymerId, int blockId) 
    const
    {
       RField<D> tailField 
-              = mixture_.polymer(polymerID).propagator(blockID, 1).tail();
+              = mixture_.polymer(polymerId).propagator(blockId, 1).tail();
       fieldIo().writeFieldRGrid(filename, tailField, unitCell());
    }
 
