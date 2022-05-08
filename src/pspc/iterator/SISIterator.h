@@ -26,7 +26,7 @@ using namespace Util;
     * \ingroup Pspc_Iterator_Module
     */
     template <int D>
-    class SISIterator : Iterator<D>
+    class SISIterator : public Iterator<D>
     {
 
     public:
@@ -63,6 +63,7 @@ using namespace Util;
     protected:
 
         using ParamComposite::readOptional;
+        using ParamComposite::read;
         using Iterator<D>::system;
 
     private:

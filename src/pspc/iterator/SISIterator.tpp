@@ -41,9 +41,8 @@ namespace Pspc{
       const IntVec<D> meshDim = system().mesh().dimensions();
 
       // Make sure SIS is not being used on an inappropriate system!
-      if (nField!=2) {
-         UTIL_THROW("SIS is currently built only to handle neat 
-                        single-component diblock copolymer melts")
+      if (nField!=2 || nPolymer!=1 || nSolvent!=0) {
+         UTIL_THROW("SIS is currently built only to handle neat single-component diblock copolymer melts.");
       }
       
       // Allocate real-space arrays. Note that Wfields_[0] does not
@@ -53,9 +52,9 @@ namespace Pspc{
       WfieldsUpdate_.allocate(nField);
       partialDeriv_.allocate(nField);
       for (int i = 0; i < nField; i++) {
-         Wfields_[i].allocate(meshDim)
+         Wfields_[i].allocate(meshDim);
          WfieldsUpdate_[i].allocate(meshDim);
-         partialDeriv_.allocate(meshDim);
+         partialDeriv_[i].allocate(meshDim);
       }
       
       // Allocate k-space arrays
@@ -102,7 +101,7 @@ namespace Pspc{
             WfieldsUpdate_[0] = stepWPlus(Wfields_[0], partialDeriv_[0]);
 
             // Update system with these updated fields and re-solve MDEs
-            updateSystemFields(WFieldsUpdate_);
+            updateSystemFields();
             system().compute();
 
             // Find the functional derivative with respect to W-.
@@ -112,10 +111,10 @@ namespace Pspc{
             WfieldsUpdate_[1] = stepWMinus(Wfields_[1], partialDeriv_[1]);;
 
             // Complete the full step by shifting the spatial average to zero
-            shiftAverageZero(WfieldsUpdate_)
+            shiftAverageZero(WfieldsUpdate_);
 
             // Update system and solve MDEs
-            updateSystemFields(WfieldsUpdate_);
+            updateSystemFields();
             system().compute();
          }
 
@@ -123,7 +122,7 @@ namespace Pspc{
 
       // Failure: iteration counter itr reached maxItr without converging
       Log::file() << "Iterator failed to converge before the maximum number of iterations.\n";
-      return 1
+      return 1;
 
    }
 
@@ -135,25 +134,25 @@ namespace Pspc{
       // Fourier variable k, though this may change in a variable unit cell
 
       const IntVec<D> dftDim = gAA_.dftDimensions();
-      const FArray<double,6> cellParam = system().unitCell().parameters()
+      FSArray<double,6> cellParam = system().unitCell().parameters();
       const double f = system().mixture().polymer(0).block(0).length() / 
                        system().mixture().polymer(0).length();
       
       // Determine actual dft mesh size, accounting for it being cut in half
-      int size = 1;
+      int dftSize = 1;
       for (int d = 0; d < D; d++) {
          dftSize*=dftDim[d];
       }
       
-      for (int i = 0; i < dftSize i++) {
-         temp = i;
-         int sizeSlice = dftSize/dftDim[D-1]
+      for (int i = 0; i < dftSize; i++) {
+         int temp = i;
+         int sizeSlice = dftSize/dftDim[D-1];
          IntVec<D> coord;
-         coord[D-1] = size % sizeSlice;
+         coord[D-1] = dftSize % sizeSlice;
          
          // For each dimension, determine coordinate in k-space array
-         for (d = D-2; d >= 0; d++) {
-            temp -= coord[d+1]*sizeSlice
+         for (int d = D-2; d >= 0; d++) {
+            temp -= coord[d+1]*sizeSlice;
             sizeSlice = dftSize/dftDim[d];
             coord[d] = temp % sizeSlice;
          }
@@ -171,10 +170,10 @@ namespace Pspc{
          }
          double k = pow(ksq,0.5);
          
-
-         gAA_[i] = 2/pow(k,4) * (f*pow(k,2) + exp(-pow(k,2)*f) - 1);
-         gAB_[i] = 1/pow(k,4) * (1 - exp(-pow(k,2)*f))*(1 - exp(-pow(k,2)*(1-f)));
-         gBB_[i] = 2/pow(k,4) * ( (1-f)*pow(k,2) + exp(-pow(k,2)*(1-f)) - 1)
+         // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
+         gAA_[i][0] = 2/pow(k,4) * (f*pow(k,2) + exp(-pow(k,2)*f) - 1);
+         gAB_[i][0] = 1/pow(k,4) * (1 - exp(-pow(k,2)*f))*(1 - exp(-pow(k,2)*(1-f)));
+         gBB_[i][0] = 2/pow(k,4) * ( (1-f)*pow(k,2) + exp(-pow(k,2)*(1-f)) - 1);
       }
       
    }
@@ -183,12 +182,12 @@ namespace Pspc{
    void SISIterator<D>::shiftAverageZero(DArray<RField<D>> & fields)
    {
       // number of fields
-      nFields = fields.capacity();
+      int nFields = fields.capacity();
 
       // for each field
       for (int i = 0; i < nFields; i++) {
          double avg = 0;
-         n = fields[i].capacity();
+         int n = fields[i].capacity();
          
          // find average for this field
          for (int j = 0; j < n; j++) {
@@ -212,13 +211,13 @@ namespace Pspc{
       // functional derivative is incorrect.
 
       // Get system data.
-      const RField<D> * CFields = system().cFields();
+      const DArray<RField<D>> * CFields = &system().cFieldsRGrid();
       // Allocate temporary array
       RField<D> temp;
       temp.allocate((*CFields)[0].meshDimensions());
       // Compute functional derivative
-      for (i = 0; i < temp.capacity(); i++) { 
-         temp[i] = (*CFields)[0][i] + (*CFields)[1][i] - 1
+      for (int i = 0; i < temp.capacity(); i++) { 
+         temp[i] = (*CFields)[0][i] + (*CFields)[1][i] - 1;
       }
 
       return temp;
@@ -232,7 +231,7 @@ namespace Pspc{
       // functional derivative is incorrect.
 
       // Get system data
-      const RField<D> * CFields = system().cFields();
+      const DArray<RField<D>> * CFields = &system().cFieldsRGrid();
       const double chiN = system().interaction().chi(0,1) * 
                            system().mixture().polymer(0).length();
       const double f = system().mixture().polymer(0).block(0).length() / 
@@ -241,7 +240,7 @@ namespace Pspc{
       RField<D> temp;
       temp.allocate((*CFields)[0].meshDimensions());
       // Compute functional derivative
-      for (i = 0; i < temp.capacity(); i++) { 
+      for (int i = 0; i < temp.capacity(); i++) { 
          temp[i] = (2*f - 1) + 2/chiN * Wfields_[1][i] - ((*CFields)[0][i] - (*CFields)[1][i]);
       }
 
@@ -257,7 +256,7 @@ namespace Pspc{
       const IntVec<D> meshDim = system().mesh().dimensions();
 
       // FFT of current W+ field
-      RFieldDFT<D> WPlusDFT;
+      RFieldDft<D> WPlusDFT;
       WPlusDFT.allocate(meshDim);
       system().fft().forwardTransform(WPlus,WPlusDFT);
 
@@ -267,18 +266,19 @@ namespace Pspc{
       system().fft().forwardTransform(partialPlus,partialPlusDFT);
 
       // FFT of updated field
-      RFieldDFT<D> WPlusUpdateDFT;
+      RFieldDft<D> WPlusUpdateDFT;
       WPlusUpdateDFT.allocate(meshDim);
       
       // Compute fourier transform of updated field
       // Determine actual dft mesh size, accounting for it being cut in half
       const IntVec<D> dftDim = WPlusDFT.dftDimensions();
-      int size = 1;
+      int dftSize = 1;
       for (int d = 0; d < D; d++) {
          dftSize*=dftDim[d];
       }
-      for (int i = 0; i < dftSize i++) {
-         WPlusUpdateDFT[i] = WPlusDFT[i] + dt/(1 + dt*(gAA_[i] + gBB_[i] + 2*gAB_[i]))*partialPlusDFT[i];
+      // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
+      for (int i = 0; i < dftSize; i++) {
+         WPlusUpdateDFT[i][0] = WPlusDFT[i][0] + dt_/(1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0] ))*partialPlusDFT[i][0];
       }
 
       RField<D> WPlusUpdate;
@@ -301,7 +301,7 @@ namespace Pspc{
       WMinusUpdate.allocate(meshDim);
 
       for (int i = 0; i < WMinusUpdate.capacity(); i++) {
-         WMinusUpdate[i] = WMinus[i] - dt/(1+dt*2/chiN) * partialMinus[i];
+         WMinusUpdate[i] = WMinus[i] - dt_/(1+dt_*2/chiN) * partialMinus[i];
       }
 
       return WMinusUpdate;
@@ -313,11 +313,20 @@ namespace Pspc{
       // get W fields, add/subtract to get W+ and W-, convert
       // to long vector format (can do we do this? should be able to)
       const int nx = Wfields_[0].capacity();
+      const int nMon = Wfields_.capacity();
 
-      for (int i = 0; i < nx; i++) {
-         Wfields_[0][i] = 1/2*( system().wFieldRGrid(0)[i] + system().wFieldRGrid(1)[i] );
-         Wfields_[1][i] = 1/2*( system().wFieldRGrid(1)[i] - system().wFieldRGrid(0)[i] );
+      DArray<RField<D>> Wfields;
+      Wfields.allocate(nMon);
+      for (int n = 0; n < nMon; n++) {
+         Wfields[n].allocate(nx);
       }
+      
+      for (int i = 0; i < nx; i++) {
+         Wfields[0][i] = 1/2*( system().wFieldRGrid(0)[i] + system().wFieldRGrid(1)[i] );
+         Wfields[1][i] = 1/2*( system().wFieldRGrid(1)[i] - system().wFieldRGrid(0)[i] );
+      }
+
+      return Wfields;
       
    }
 
@@ -362,19 +371,19 @@ namespace Pspc{
    void SISIterator<D>::updateSystemFields()
    {
       const int nx = Wfields_[0].capacity();
-      const int nMon = WFields_.capacity();
+      const int nMon = Wfields_.capacity();
 
-      DArray<System<D>::WField> Wupdate;
+      DArray<typename System<D>::WField> Wupdate;
 
       Wupdate.allocate(nMon);
       for (int n = 0; n < nMon; n++) {
-         Wupdate.allocate(nx);
+         Wupdate[n].allocate(nx);
       }
       for (int i = 0; i < nx; i++) {
          Wupdate[0][i] = WfieldsUpdate_[0][i] - WfieldsUpdate_[1][i];
          Wupdate[1][i] = WfieldsUpdate_[0][i] + WfieldsUpdate_[1][i];
       }
-      system().setWRgrid(Wupdate);
+      system().setWRGrid(Wupdate);
 
    }
    

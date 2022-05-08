@@ -5,6 +5,7 @@
 
 // Subclasses of Iterator 
 #include "AmIterator.h"
+#include "SISIterator.h"
 
 namespace Pscf {
 namespace Pspc {
