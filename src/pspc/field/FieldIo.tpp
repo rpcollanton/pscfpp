@@ -1136,7 +1136,7 @@ namespace Pspc
             rank = dftMesh.rank(wavePtr->indicesDft);
             component = std::complex<double>(in[rank][0], in[rank][1]);
             component /= wavePtr->coeff;
-            //UTIL_CHECK(std::abs(component.imag()) < 1.0E-8);
+            UTIL_CHECK(std::abs(component.imag()) < 1.0E-8);
             out[ib] = component.real();
             ++is;
 

@@ -25,7 +25,7 @@ System{
   }
   SISIterator{
      maxItr 300
-     epsilon 1e-5
-     timeStep 0.5
+     epsilon 1e-8
+     timeStep 5
   }
 }
