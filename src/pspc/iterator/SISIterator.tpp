@@ -144,7 +144,6 @@ namespace Pspc{
       // Fourier variable k, though this may change in a variable unit cell
 
       const IntVec<D> dftDim = gAA_.dftDimensions();
-      const int size = gAA_.capacity();
       FSArray<double,6> cellParam = system().unitCell().parameters();
       const double f = system().mixture().polymer(0).block(0).length() / 
                        system().mixture().polymer(0).length();
@@ -205,11 +204,11 @@ namespace Pspc{
          
          // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
          // Divided by size to account for the factor of size that is picked up during the IFFT.
-         gAA_[i][0] = 2/pow(k,4) * (f*pow(k,2) + exp(-pow(k,2)*f) - 1) / size;
+         gAA_[i][0] = 2/pow(k,4) * (f*pow(k,2) + exp(-pow(k,2)*f) - 1);
          gAA_[1][1] = 0.0;
-         gAB_[i][0] = 1/pow(k,4) * (1 - exp(-pow(k,2)*f))*(1 - exp(-pow(k,2)*(1-f))) / size;
+         gAB_[i][0] = 1/pow(k,4) * (1 - exp(-pow(k,2)*f))*(1 - exp(-pow(k,2)*(1-f)));
          gAB_[1][1] = 0.0;
-         gBB_[i][0] = 2/pow(k,4) * ( (1-f)*pow(k,2) + exp(-pow(k,2)*(1-f)) - 1) / size;
+         gBB_[i][0] = 2/pow(k,4) * ( (1-f)*pow(k,2) + exp(-pow(k,2)*(1-f)) - 1);
          gBB_[1][1] = 0.0;
       }
       
@@ -286,6 +285,7 @@ namespace Pspc{
       // do FFT, solve in fourier space, FFT-inverse back
 
       const IntVec<D> meshDim = system().mesh().dimensions();
+      const double size = (double)WPlus.capacity();
 
       // FFT of current W+ field
       RFieldDft<D> WPlusDFT;
@@ -311,8 +311,9 @@ namespace Pspc{
 
       // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
       for (int i = 0; i < dftSize; i++) {
-         WPlusUpdateDFT[i][0] = WPlusDFT[i][0] + dt_/( 1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0]) )*partialPlusDFT[i][0];
-         WPlusUpdateDFT[i][1] = 0.0;
+         WPlusUpdateDFT[i][0] = WPlusDFT[i][0]*size + dt_/( 1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0]) )*partialPlusDFT[i][0]*size;
+         WPlusUpdateDFT[i][0] /= size; // accounting for unnormalized fftw
+         WPlusUpdateDFT[i][1] = WPlusDFT[i][1] + dt_*partialPlusDFT[i][1];
       }
 
       // Manually set 0th element of fourier transform to zero to set average to zero
