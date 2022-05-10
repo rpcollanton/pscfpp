@@ -145,6 +145,49 @@ public:
       TEST_ASSERT (std::abs(stress) < 1.0E-8);
    }
 
+   void testIterate3D_bcc_rigid()
+   {
+      printMethod(TEST_FUNC);
+      openLogFile("out/testIterate3D_bcc_rigid.log");
+
+      System<3> system;
+      SetUpSystem<3>(system, "in/bcc/param.rigid");
+
+      // Read initial guess
+      system.readWBasis("in/bcc/omega.ref");
+
+      // Save copy of initial fields
+      DArray< DArray<double> > wFields_check;
+      wFields_check = system.wFields();
+
+      // Iterate and output solution
+      int error = system.iterate();
+      if (error) {
+         TEST_THROW("Iterator failed to converge.");
+      }
+      system.writeWBasis("out/testIterate3D_bcc_rigid_w.bf");
+      system.writeCBasis("out/testIterate3D_bcc_rigid_c.bf");
+
+      // Compare solution to reference solution
+      BFieldComparison comparison(1); // Constructor argument 1 skips star 0
+      comparison.compare(wFields_check, system.wFields());
+      // setVerbose(1);
+      if (verbose() > 0) {
+         std::cout << "\n";
+         std::cout << "Max error = " << comparison.maxDiff() << "\n";
+      }
+      TEST_ASSERT(comparison.maxDiff() < 5.0E-7);
+
+      // Test that stress is small
+      system.mixture().computeStress();
+      double stress = system.mixture().stress(0);
+      if (verbose() > 0) {
+         std::cout << "stress = " << stress << "\n";
+      }
+      TEST_ASSERT(std::abs(stress) < 1.0E-7);
+
+   }
+
 };
 
 
@@ -152,7 +195,8 @@ public:
 TEST_BEGIN(SISIteratorTest)
 TEST_ADD(SISIteratorTest, testConstructors)
 TEST_ADD(SISIteratorTest, testIterate1D_lam_rigid)
-//TEST_ADD(SISIteratorTest, testIterate2D_hex_rigid)
+TEST_ADD(SISIteratorTest, testIterate2D_hex_rigid)
+TEST_ADD(SISIteratorTest, testIterate3D_bcc_rigid)
 TEST_END(SISIteratorTest)
 
 #endif

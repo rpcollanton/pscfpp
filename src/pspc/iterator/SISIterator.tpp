@@ -68,7 +68,6 @@ namespace Pspc{
       gAA_.allocate(meshDim);
       gAB_.allocate(meshDim);
       gBB_.allocate(meshDim);
-
    }
 
    template <int D>
@@ -90,7 +89,6 @@ namespace Pspc{
          Log::file()<<" Iteration  "<<itr<<std::endl;
          
          // Compute error and test it with an isConverged function
-         std::cout << "itr " << itr << ":   FIND ERROR" << std::endl;
          done = isConverged();
 
          // Do stuff if error is low enough
@@ -107,24 +105,19 @@ namespace Pspc{
             // transfrom from one set of fields to another
 
             // Find the functional derivative with respect to W+ 
-            std::cout << "itr " << itr << ":   FIND PARTIAL PLUS" << std::endl;
             partialDeriv_[0] = findPartialPlus();
             
             // Solve the first semi-implicit equation for W+ (j+1/2)
-            std::cout << "itr " << itr << ":   STEP W PLUS" << std::endl;
             Wfields_[0] = stepWPlus(Wfields_[0], partialDeriv_[0]);
 
             // Update system with these updated fields and re-solve MDEs
-            std::cout << "itr " << itr << ":   SOLVE MDEs" << std::endl;
             updateSystemFields(Wfields_);
             system().compute();
 
             // Find the functional derivative with respect to W-.
-            std::cout << "itr " << itr << ":   FIND PARTIAL MINUS" << std::endl;
             partialDeriv_[1] = findPartialMinus(Wfields_[1]);
 
             // Solve the second semi-implicit equation for W- (j+1/2)
-            std::cout << "itr " << itr << ":   STEP W MINUS" << std::endl;
             Wfields_[1] = stepWMinus(Wfields_[1], partialDeriv_[1]);
 
             // Complete the full step by shifting the spatial average to zero
@@ -151,6 +144,7 @@ namespace Pspc{
       // Fourier variable k, though this may change in a variable unit cell
 
       const IntVec<D> dftDim = gAA_.dftDimensions();
+      const int size = gAA_.capacity();
       FSArray<double,6> cellParam = system().unitCell().parameters();
       const double f = system().mixture().polymer(0).block(0).length() / 
                        system().mixture().polymer(0).length();
@@ -158,10 +152,10 @@ namespace Pspc{
       // Expand out cell parameters because we need to use them in each direction
       FSArray<double,D> cellLengths;
       for (int i = 0; i < D; i++) {
-         if (cellParam[i] < 1E-10) {
-            cellLengths[i] = cellLengths[i-1];
+         if (i >= cellParam.size()) {
+            cellLengths.append(cellLengths[i-1]);
          } else {
-            cellLengths[i] = cellParam[i];
+            cellLengths.append(cellParam[i]);
          }
       }
 
@@ -210,11 +204,13 @@ namespace Pspc{
          double k = pow(ksq,0.5);
          
          // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
-         gAA_[i][0] = 2/pow(k,4) * (f*pow(k,2) + exp(-pow(k,2)*f) - 1);
-         gAB_[i][0] = 1/pow(k,4) * (1 - exp(-pow(k,2)*f))*(1 - exp(-pow(k,2)*(1-f)));
-         gBB_[i][0] = 2/pow(k,4) * ( (1-f)*pow(k,2) + exp(-pow(k,2)*(1-f)) - 1);
-         // std::cout << "i = " << i << "   k[i] = " << k << std::endl;
-         // std::cout << "i = " << i << "   gAA_[i] = " << gAA_[i][0] << "   gAB_[i] = " << gAB_[i][0] << "   gBB_[i] = " << gBB_[i][0] << std::endl;
+         // Divided by size to account for the factor of size that is picked up during the IFFT.
+         gAA_[i][0] = 2/pow(k,4) * (f*pow(k,2) + exp(-pow(k,2)*f) - 1) / size;
+         gAA_[1][1] = 0.0;
+         gAB_[i][0] = 1/pow(k,4) * (1 - exp(-pow(k,2)*f))*(1 - exp(-pow(k,2)*(1-f))) / size;
+         gAB_[1][1] = 0.0;
+         gBB_[i][0] = 2/pow(k,4) * ( (1-f)*pow(k,2) + exp(-pow(k,2)*(1-f)) - 1) / size;
+         gBB_[1][1] = 0.0;
       }
       
    }
@@ -259,7 +255,6 @@ namespace Pspc{
       // Compute functional derivative
       for (int i = 0; i < temp.capacity(); i++) { 
          temp[i] = (*CFields)[0][i] + (*CFields)[1][i] - 1;
-         std::cout << "partial plus  " << temp[i] << std::endl;
       }
 
       return temp;
@@ -280,7 +275,6 @@ namespace Pspc{
       // Compute functional derivative
       for (int i = 0; i < temp.capacity(); i++) { 
          temp[i] = (2*f - 1) + 2/chiN * WMinus[i] - ((*CFields)[0][i] - (*CFields)[1][i]);
-         std::cout << "partial minus  " << temp[i] << std::endl;
       }
 
       return temp;
@@ -314,23 +308,19 @@ namespace Pspc{
       for (int d = 0; d < D; d++) {
          dftSize*=dftDim[d];
       }
+
       // Note: DFT fields are fields of fftw_complex numbers, with a real component [0] and imaginary component [1]
       for (int i = 0; i < dftSize; i++) {
          WPlusUpdateDFT[i][0] = WPlusDFT[i][0] + dt_/( 1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0]) )*partialPlusDFT[i][0];
-         // std::cout << "k-space WPlusStep " << i << ":  " << dt_/( 1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0]) )*partialPlusDFT[i][0] << std::endl;
-         // std::cout << "k-space Wplus " << i << ":  " << WPlusDFT[i][0] << std::endl;
-         // std::cout << "k-space denom " << i << ":  " << (1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0] )) << std::endl;
-         // std::cout << "k-space Wplus update " << i << ":  " << WPlusUpdateDFT[i][0] << std::endl;
-         std::cout << "k-space partial plus " << i << ":  " << partialPlusDFT[i][0] << std::endl;
+         WPlusUpdateDFT[i][1] = 0.0;
       }
+
+      // Manually set 0th element of fourier transform to zero to set average to zero
+      WPlusUpdateDFT[0][0] = 0.0; 
 
       RField<D> WPlusUpdate;
       WPlusUpdate.allocate(meshDim);
-      system().fft().inverseTransformSafe(WPlusUpdateDFT,WPlusUpdate);
-
-      for (int i = 0; i < WPlusUpdate.capacity(); i++) {
-         std::cout << "WPlusStep " << i << ":  " << WPlusUpdate[i] - WPlus[i] << std::endl;
-      }
+      system().fft().inverseTransform(WPlusUpdateDFT,WPlusUpdate);
 
       return WPlusUpdate;
    }
@@ -348,10 +338,6 @@ namespace Pspc{
 
       for (int i = 0; i < WMinusUpdate.capacity(); i++) {
          WMinusUpdate[i] = WMinus[i] - dt_/(1 + dt_*2/chiN) * partialMinus[i];
-         std::cout << "WMinusStep " << i << ":  " << - dt_/(1 + dt_*2/chiN) * partialMinus[i] << std::endl;
-         // std::cout << "Wminus " << i << ":  " << WMinus[i] << std::endl;
-         // std::cout << "k-space Wplus update " << i << ":  " << WPlusUpdateDFT[i][0] << std::endl;
-         // std::cout << "partial minus " << i << ":  " << partialMinus[i] << std::endl;
       }
       
       return WMinusUpdate;
@@ -367,7 +353,6 @@ namespace Pspc{
       for (int i = 0; i < nx; i++) {
          Wfields[0][i] = 0.5*( system().wFieldRGrid(0)[i] + system().wFieldRGrid(1)[i] );
          Wfields[1][i] = 0.5*( system().wFieldRGrid(1)[i] - system().wFieldRGrid(0)[i] );
-         // std::cout << "Get pressure  " << Wfields[0][i] << "     Get exchange  " << Wfields[1][i] << std::endl;
       }
 
       
@@ -430,7 +415,6 @@ namespace Pspc{
       for (int i = 0; i < nx; i++) {
          WChain[0][i] = WfieldsUpdate[0][i] - WfieldsUpdate[1][i];
          WChain[1][i] = WfieldsUpdate[0][i] + WfieldsUpdate[1][i];
-         // std::cout << "Pressure:    " << WfieldsUpdate[0][i] << "     Exchange:    " << WfieldsUpdate[1][i] << std::endl;
       }
       system().setWRGrid(WChain);
 
