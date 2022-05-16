@@ -65,11 +65,15 @@ using namespace Util;
         using ParamComposite::readOptional;
         using ParamComposite::read;
         using Iterator<D>::system;
+        using Iterator<D>::isFlexible_;
 
     private:
 
         /// Error tolerance
         double epsilon_;
+
+        /// How are stress residuals scaled in error calculation?
+        double scaleStress_;
 
         /// Maximum number of iterations to attempt
         int maxItr_;

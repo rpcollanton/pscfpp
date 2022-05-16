@@ -38,6 +38,9 @@ namespace Pspc{
       read(in, "epsilon", epsilon_);
       // pseudo-time step size
       read(in, "timeStep", dt_);
+      // flexible unit cell? 
+      readOptional(in, "isFlexible", isFlexible_);
+      readOptional(in, "scaleStress", scaleStress_);
    }
 
    template <int D>
@@ -285,7 +288,7 @@ namespace Pspc{
       // do FFT, solve in fourier space, FFT-inverse back
 
       const IntVec<D> meshDim = system().mesh().dimensions();
-      const double size = (double)WPlus.capacity();
+      const double size = WPlus.capacity();
 
       // FFT of current W+ field
       RFieldDft<D> WPlusDFT;
@@ -397,6 +400,11 @@ namespace Pspc{
          error = errorMinus;
       else
          error = errorPlus;
+
+      // If unit cell parameters are being sequentially relaxed, check them
+      if(isFlexible_) {
+         
+      }
 
       return error < epsilon_;
    }
