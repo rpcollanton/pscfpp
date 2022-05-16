@@ -12,148 +12,146 @@
 #include <pspc/field/RFieldDft.h>
 #include <pspc/field/RField.h>
 
-namespace Pscf {
-namespace Pspc {
+namespace Pscf
+{
+namespace Pspc
+{
 
-template <int D>
-class System;
+   template <int D>
+   class System;
 
-using namespace Util;
+   using namespace Util;
 
-    /**
-    * Pspc implementation of the Semi-Implicit Seidel iterator.
-    *
-    * \ingroup Pspc_Iterator_Module
-    */
-    template <int D>
-    class SISIterator : public Iterator<D>
-    {
+   /**
+   * Pspc implementation of the Semi-Implicit Seidel iterator.
+   *
+   * \ingroup Pspc_Iterator_Module
+   */
+   template <int D>
+   class SISIterator : public Iterator<D>
+   {
 
-    public:
+   public:
+      /**
+      * Constructor.
+      *
+      * \param system System object associated with this iterator.
+      */
+      SISIterator(System<D> &system);
 
-        /**
-        * Constructor.
-        * 
-        * \param system System object associated with this iterator.
-        */
-        SISIterator(System<D>& system);
+      /**
+      * Destructor.
+      */
+      ~SISIterator();
 
-        /**
-        * Destructor.
-        */
-        ~SISIterator();
+      /**
+      * Read all parameters and initialize.
+      *
+      * \param in input filestream
+      */
+      void readParameters(std::istream &in);
 
-        /**
-        * Read all parameters and initialize.
-        *
-        * \param in input filestream
-        */
-        void readParameters(std::istream& in);
+      /**
+      * Setup and allocate required memory.
+      */
+      void setup();
 
-        /**
-        * Setup and allocate required memory.
-        */
-        void setup();
+      /**
+      * Iterate to a solution
+      */
+      int solve();
 
-        /**
-        * Iterate to a solution
-        */
-        int solve();
+   protected:
+      using ParamComposite::read;
+      using ParamComposite::readOptional;
+      using Iterator<D>::system;
+      using Iterator<D>::isFlexible_;
 
-    protected:
+   private:
+      /// Error tolerance
+      double epsilon_;
 
-        using ParamComposite::readOptional;
-        using ParamComposite::read;
-        using Iterator<D>::system;
-        using Iterator<D>::isFlexible_;
+      /// How are stress residuals scaled in error calculation?
+      double scaleStress_;
 
-    private:
+      /// Maximum number of iterations to attempt
+      int maxItr_;
 
-        /// Error tolerance
-        double epsilon_;
+      /// Time step size
+      double dt_;
 
-        /// How are stress residuals scaled in error calculation?
-        double scaleStress_;
+      /// W fields last used to solve the MDEs. Has two components,
+      /// W+ = 1/2*(W_A + W_B) (pressure-like field) and
+      /// W- = 1/2*(W_A - W_B) (exchange field)
 
-        /// Maximum number of iterations to attempt
-        int maxItr_;
+      DArray<RField<D>> Wfields_;
 
-        /// Time step size
-        double dt_;
+      /// Fourier transformed scattering function, gAA
+      RFieldDft<D> gAA_;
 
-        /// W fields last used to solve the MDEs. Has two components,
-        /// W+ = 1/2*(W_A + W_B) (pressure-like field) and 
-        /// W- = 1/2*(W_A - W_B) (exchange field)
+      /// Fourier transformed scattering function, gAB
+      RFieldDft<D> gAB_;
 
-        DArray<RField<D>> Wfields_;
+      /// Fourier transformed scattering function, gBB
+      RFieldDft<D> gBB_;
 
-        /// Fourier transformed scattering function, gAA
-        RFieldDft<D> gAA_;
+      /// Real-space partial functional derivative ofs the effective
+      /// Hamiltonian with respect to the transformed W fields
+      DArray<RField<D>> partialDeriv_;
 
-        /// Fourier transformed scattering function, gAB
-        RFieldDft<D> gAB_;
+      /**
+      * Compute the diblock scattering functions.
+      */
+      void evaluateScatteringFnc();
 
-        /// Fourier transformed scattering function, gBB
-        RFieldDft<D> gBB_;
+      /**
+      * Shift the average of each field in an array of fields to 0.
+      *
+      * \param fields An array of fields to be shifted.
+      */
+      void shiftAverageZero(DArray<RField<D>> &fields);
 
-        /// Real-space partial functional derivative ofs the effective
-        /// Hamiltonian with respect to the transformed W fields
-        DArray<RField<D>> partialDeriv_;
+      /**
+      * Find the partial functional derivative of the effective
+      * Hamiltonian with respect to the W+ field.
+      */
+      RField<D> findPartialPlus();
 
-        /**
-        * Compute the diblock scattering functions.
-        */
-        void evaluateScatteringFnc();
+      /**
+      * Find the partial functional derivative of the effective
+      * Hamiltonian with respect to the W- field.
+      */
+      RField<D> findPartialMinus(const RField<D> &WMinus);
 
-        /**
-        * Shift the average of each field in an array of fields to 0.
-        *  
-        * \param fields An array of fields to be shifted.
-        */
-        void shiftAverageZero(DArray<RField<D>> & fields);
+      /**
+      * Solve the semi-implicit equation for the next half-step of W+.
+      */
+      RField<D> stepWPlus(const RField<D> &WPlus, const RField<D> &partialPlus);
 
-        /**
-        * Find the partial functional derivative of the effective
-        * Hamiltonian with respect to the W+ field.
-        */
-        RField<D> findPartialPlus();
+      /**
+      * Solve the semi-implicit equation for the next half-step of W+.
+      */
+      RField<D> stepWMinus(const RField<D> &WMinus, const RField<D> &partialMinus);
 
-        /**
-        * Find the partial functional derivative of the effective
-        * Hamiltonian with respect to the W- field.
-        */
-        RField<D> findPartialMinus(const RField<D> & WMinus);
+      /**
+      * Get the current W fields on the system, and convert W_A and W_B
+      * to W+ and W- (in that order). Output them.
+      */
+      void getWFields(DArray<RField<D>> &Wfields);
 
-        /**
-        * Solve the semi-implicit equation for the next half-step of W+.
-        */
-        RField<D> stepWPlus(const RField<D> & WPlus, const RField<D> & partialPlus);
+      /**
+      * Checks if the system is converged by comparing the self-consistency
+      * equations via taking the partial functional derivatives with respect
+      * to W+/-.
+      */
+      bool isConverged();
 
-        /**
-        * Solve the semi-implicit equation for the next half-step of W+.
-        */
-        RField<D> stepWMinus(const RField<D> & WMinus, const RField<D> & partialMinus);
-
-        /**
-        * Get the current W fields on the system, and convert W_A and W_B
-        * to W+ and W- (in that order). Output them. 
-        */
-        void getWFields(DArray<RField<D>> & Wfields);
-
-        /**
-        * Checks if the system is converged by comparing the self-consistency
-        * equations via taking the partial functional derivatives with respect
-        * to W+/-. 
-        */
-       bool isConverged();
-
-        /**
-         * Update the W fields on the associated system object
-         * with the W fields stored in WfieldsUpdate 
-         */
-        void updateSystemFields(const DArray<RField<D>> & WfieldsUpdate);
-
-    };
+      /**
+      * Update the W fields on the associated system object
+      * with the W fields stored in WfieldsUpdate
+      */
+      void updateSystemFields(const DArray<RField<D>> &WfieldsUpdate);
+   };
 
 } // namespace Pspc
 } // namespace Pscf
