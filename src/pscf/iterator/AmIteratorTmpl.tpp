@@ -9,7 +9,6 @@
 */
 
 #include <pscf/inter/ChiInteraction.h>
-#include <util/containers/FArray.h>
 #include <util/format/Dbl.h>
 #include <util/misc/Timer.h>
 #include <cmath>

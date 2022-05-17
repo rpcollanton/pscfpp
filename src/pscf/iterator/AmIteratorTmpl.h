@@ -9,10 +9,7 @@
 */
 
 #include <pscf/math/LuSolver.h>
-
 #include <util/containers/DArray.h>
-#include <util/containers/FArray.h>
-#include <util/containers/FSArray.h>
 #include <util/containers/DMatrix.h>
 #include <util/containers/RingBuffer.h>
 

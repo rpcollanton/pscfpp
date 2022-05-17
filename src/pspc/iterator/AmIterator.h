@@ -9,6 +9,7 @@
 */
 
 #include "Iterator.h"
+#include <util/containers/FSArray.h>
 #include <pscf/iterator/AmIteratorTmpl.h>                 
 
 namespace Pscf {
