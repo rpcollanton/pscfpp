@@ -9,6 +9,7 @@
 */
 
 #include "Iterator.h"
+#include <util/containers/FSArray.h>
 #include <pspc/field/RFieldDft.h>
 #include <pspc/field/RField.h>
 
@@ -138,6 +139,12 @@ namespace Pspc
       * to W+ and W- (in that order). Output them.
       */
       void getWFields(DArray<RField<D>> &Wfields);
+
+      /**
+      * Compute the Jacobian of the stress in each unit cell direction 
+      * as a function of the unit cell parameters. 
+      */
+      DMatrix<double> computeStressJacobian(FSArray<double,6> param);
 
       /**
       * Checks if the system is converged by comparing the self-consistency

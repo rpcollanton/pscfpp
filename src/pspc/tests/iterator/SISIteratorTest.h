@@ -188,6 +188,102 @@ public:
 
    }
 
+   void testIterate1D_lam_flex()
+   {
+      printMethod(TEST_FUNC);
+      openLogFile("out/testIterate1D_lam_flex.log");
+
+      System<1> system;
+      SetUpSystem<1>(system, "in/lam/param.flex");
+
+      system.readWBasis("in/lam/omega.ref");
+
+      DArray< DArray<double> > wFields_check;
+      wFields_check = system.wFields();
+
+      // Read input w-fields, iterate and output solution
+      system.readWBasis("in/lam/omega.in");
+      int error = system.iterate();
+      if (error) {
+         TEST_THROW("Iterator failed to converge.");
+      }
+      system.writeWBasis("out/testIterate1D_lam_flex_w.bf");
+      system.writeCBasis("out/testIterate1D_lam_flex_c.bf");
+
+      BFieldComparison comparison(1);
+      comparison.compare(wFields_check, system.wFields());
+      if (verbose() > 0) {
+         std::cout << "\n";
+         std::cout << "Max error = " << comparison.maxDiff() << "\n";
+      }
+      TEST_ASSERT(comparison.maxDiff() < 5.0E-7);
+   }
+
+   void testIterate2D_hex_flex()
+   {
+      printMethod(TEST_FUNC);
+      openLogFile("out/testIterate2D_hex_flex.log");
+
+      System<2> system;
+      SetUpSystem<2>(system, "in/hex/param.flex");
+
+      // Read reference solution (produced by Fortran code)
+      system.readWBasis("in/hex/omega.ref");
+
+      // Save reference solution to wFields_check array
+      DArray< DArray<double> > wFields_check;
+      wFields_check = system.wFields();
+
+      system.readWBasis("in/hex/omega.in");
+      int error = system.iterate();
+      if (error) {
+         TEST_THROW("Iterator failed to converge.");
+      }
+      system.writeWBasis("out/testIterate2D_hex_flex_w.bf");
+      system.writeCBasis("out/testIterate2D_hex_flex_c.bf");
+
+      // Compare solution to reference solution
+      BFieldComparison comparison(1);
+      // setVerbose(1);
+      comparison.compare(wFields_check, system.wFields());
+      if (verbose() > 0) {
+         std::cout << "\n";
+         std::cout << "Max error = " << comparison.maxDiff() << "\n";
+      }
+      TEST_ASSERT(comparison.maxDiff() < 5.0E-6);
+   }
+
+   void testIterate3D_bcc_flex()
+   {
+      printMethod(TEST_FUNC);
+      openLogFile("out/testIterate3D_bcc_flex.log");
+
+      System<3> system;
+      SetUpSystem<3>(system, "in/bcc/param.flex");
+
+      system.readWBasis("in/bcc/omega.ref");
+      DArray< DArray<double> > wFields_check;
+      wFields_check = system.wFields();
+
+      system.readWBasis("in/bcc/omega.in");
+      int error = system.iterate();
+      if (error) {
+         TEST_THROW("Iterator failed to converge.");
+      }
+      system.writeWBasis("out/testIterate3D_bcc_flex_w.bf");
+      system.writeCBasis("out/testIterate3D_bcc_flex_c.bf");
+
+      BFieldComparison comparison(1);
+      comparison.compare(wFields_check, system.wFields());
+      // setVerbose(1);
+      if (verbose() > 0) {
+         std::cout << "\n";
+         std::cout << "Max error = " << comparison.maxDiff() << "\n";
+      }
+      // High threshold because its low enough to indicate it works without
+      // demanding too much computation time for a test!
+      TEST_ASSERT(comparison.maxDiff() < 5.0E-5);
+   }
 };
 
 
@@ -197,6 +293,9 @@ TEST_ADD(SISIteratorTest, testConstructors)
 TEST_ADD(SISIteratorTest, testIterate1D_lam_rigid)
 TEST_ADD(SISIteratorTest, testIterate2D_hex_rigid)
 TEST_ADD(SISIteratorTest, testIterate3D_bcc_rigid)
+TEST_ADD(SISIteratorTest, testIterate1D_lam_flex)
+TEST_ADD(SISIteratorTest, testIterate2D_hex_flex)
+TEST_ADD(SISIteratorTest, testIterate3D_bcc_flex)
 TEST_END(SISIteratorTest)
 
 #endif

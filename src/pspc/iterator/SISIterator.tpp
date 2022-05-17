@@ -9,7 +9,8 @@
 */
 
 #include <util/global.h>
-#include <math.h> // for pow
+#include <math.h>                // for pow
+#include <pscf/math/LuSolver.h>  // for finding inverse jacobian
 #include "SISIterator.h"
 #include <pspc/System.h>
 #include <pscf/inter/ChiInteraction.h>
@@ -39,6 +40,8 @@ namespace Pspc{
       // pseudo-time step size
       read(in, "timeStep", dt_);
       // flexible unit cell? 
+      isFlexible_ = 0;
+      scaleStress_ = 10;
       readOptional(in, "isFlexible", isFlexible_);
       readOptional(in, "scaleStress", scaleStress_);
    }
@@ -84,7 +87,7 @@ namespace Pspc{
       
 
       // Iterative loop 
-      bool done;
+      bool fieldsConverged;
       for (int itr = 0; itr < maxItr_; ++itr) {
          getWFields(Wfields_);
 
@@ -92,10 +95,111 @@ namespace Pspc{
          Log::file()<<" Iteration  "<<itr<<std::endl;
          
          // Compute error and test it with an isConverged function
-         done = isConverged();
+         fieldsConverged = isConverged();
 
-         // Do stuff if error is low enough
-         if (done) {
+         // If the fields error is low enough
+         if (fieldsConverged) {
+            
+            // Now that the fields are converged at these unit cell parameters, relax the
+            // unit cell parameters if the unit cell is flexible.
+            if (isFlexible_) {
+               int nParam = system().unitCell().nParameter();
+               DArray<double> stresses;
+               stresses.allocate(nParam);
+
+               // Compute the stress
+               system().mixture().computeStress();
+
+               // Check if the stress is low enough initially
+               Log::file()<<"---------------------"<<std::endl;
+               Log::file() << "Potential fields converged. Checking Stress..." << std::endl;
+               bool stressConverged = true;
+               for (int i = 0; i < nParam; i++) {
+                  stresses[i] = system().mixture().stress(i);
+                  Log::file() << "Stress " << i <<  " = " << stresses[i] << std::endl;
+                  if (abs(scaleStress_ * stresses[i]) > epsilon_) { 
+                     stressConverged = false;
+                     break;
+                  }
+               }
+               Log::file() << std::endl;
+
+               // If stress is not low enough.. iterate the unit cell parameters using Newton-Raphson (NR).
+               if (!stressConverged) {
+
+                  // Reset field convergence status to false upon changing parameters
+                  fieldsConverged = false;
+                  // Get current unit cell parameters
+                  FSArray<double, 6> param = system().unitCell().parameters();
+                  // Allocate matrices for the jacobian and inverse jacobian 
+                  DMatrix<double> J, Jinv;
+                  J.allocate(nParam,nParam);
+                  Jinv.allocate(nParam,nParam);
+
+                  // Iterate to solve the stress equations for the optimal unit cell parameters
+                  Log::file() << "Relaxing Unit Cell Parameters..." << std::endl;
+                  
+                  for (int stressItr = 0; stressItr < 50; stressItr++) {
+                     Log::file()<<" Unit Cell Iteration "<<stressItr<<std::endl;
+                     for (int i = 0; i < nParam; i++) {
+                        Log::file()<<" -- Param  " << i << " = " << param[i] << std::endl;
+                        Log::file()<<" -- Stress " << i << " = " << stresses[i] << std::endl;
+                     }
+
+                     // Compute jacobian
+                     J = computeStressJacobian(param);
+
+                     // Compute the inverse jacobian
+                     if (nParam == 1) {
+                        Jinv(0,0) = 1/J(0,0);
+                     } else {
+                        LuSolver solver;
+                        solver.allocate(nParam);
+                        solver.computeLU(J);
+                        solver.inverse(Jinv);
+                     }
+
+                     // Adjust unit cell parameters with one step of NR
+                     for (int i = 0; i < nParam; i++) {
+                        for (int j = 0; j < nParam; j++) {
+                           param[i] -= Jinv(i,j)*stresses[j];
+                        }
+                     }
+                     // Update unit cell parameters on system
+                     system().setUnitCell(param);
+
+                     // Solve MDEs and recompute stress
+                     system().compute();
+                     system().mixture().computeStress();
+
+                     // Check unit cell parameter convergence
+                     stressConverged = true;
+                     for (int i = 0; i < nParam; i++) {
+                        stresses[i] = system().mixture().stress(i);
+                        if (abs(scaleStress_ * stresses[i]) > epsilon_) { 
+                           stressConverged = false;
+                           break;
+                        }
+                     }
+                     if (stressConverged) {
+                        break;
+                     }
+                  }
+                  // If the loop finishes and stress is still not converged, then the hardcoded max iters was reached.
+                  if (!stressConverged) {
+                     Log::file() << "Iterator reached maximum number of stress relaxation iterations." << std::endl;
+                     return 1;
+                  }
+
+                  // If unit cell parameters were originally not converged but now are, then 
+                  // re-solve the MDEs and go back to the outer for loop for converging 
+                  // the potential fields.
+                  evaluateScatteringFnc();
+                  Log::file()<<"\nUnit cell relaxed. Relaxing potential fields in new cell..." << std::endl;
+                  continue;
+               }
+            }
+            
             Log::file() << "----------CONVERGED----------"<< std::endl;
             return 0;
 
@@ -364,6 +468,58 @@ namespace Pspc{
       return;
    }
 
+   template <int D> 
+   DMatrix<double> SISIterator<D>::computeStressJacobian(FSArray<double,6> param)
+   {
+      const int nParam = system().unitCell().nParameter();
+
+      // current and incremented stresses
+      DArray<double> stresses, incrStresses;
+      stresses.allocate(nParam);
+      incrStresses.allocate(nParam);
+
+      // get current stresses
+      for (int i = 0; i < nParam; i++) {
+         stresses[i] = system().mixture().stress(i);
+      }
+
+      // Parameter step size used for numerically approximating derivatives
+      const double dparam = 1E-8;
+
+      // Workspace for incrementing parameters
+      FSArray<double,6> incrParam;
+
+      // Initialize and allocate the Jacobian
+      DMatrix<double> J;
+      J.allocate(nParam,nParam);
+
+      // Vary each parameter and compute the stress response, storing it in the jacobian
+      for (int i = 0; i < nParam; i++) {
+         // Reset parameters to values in currParam and increment one of them
+         incrParam = param;
+         incrParam[i] += dparam;
+         // Update system with incremented parameter and compute stress
+         system().setUnitCell(incrParam);
+         system().compute();
+         system().mixture().computeStress();
+         // Get incremented stresses
+         for (int j = 0; j < nParam; j++) {
+            incrStresses[j] = system().mixture().stress(i);
+         }
+         // Numerically approximate derivative
+         for (int j = 0; j < nParam; j++) {
+            J(j,i) = 1/dparam * (incrStresses[j]-stresses[j]);
+         }
+      }
+
+      // Reset system to original parameters!
+      system().setUnitCell(param);
+      system().compute();
+      system().mixture().computeStress();
+
+      return J;
+   }
+
    template <int D>
    bool SISIterator<D>::isConverged() {
 
@@ -401,11 +557,6 @@ namespace Pspc{
       else
          error = errorPlus;
 
-      // If unit cell parameters are being sequentially relaxed, check them
-      if(isFlexible_) {
-         
-      }
-
       return error < epsilon_;
    }
 
@@ -429,7 +580,6 @@ namespace Pspc{
 
    }
    
-
 }
 }
 #endif

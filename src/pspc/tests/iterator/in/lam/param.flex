@@ -23,10 +23,11 @@ System{
      mesh     32
      groupName P_-1
   }
-  AmIterator{
-     maxItr 300
-     epsilon 1e-10
-     maxHist 10
+  SISIterator{
+     maxItr 10000
+     epsilon 1e-8
+     timeStep 2
      isFlexible   1
+     scaleStress  1
   }
 }
