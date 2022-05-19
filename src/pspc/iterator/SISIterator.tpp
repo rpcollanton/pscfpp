@@ -350,11 +350,12 @@ namespace Pspc {
       for (int i = 0; i < dftSize; i++) {
          WPlusUpdateDFT[i][0] = WPlusDFT[i][0]*size + dt_/( 1 + dt_*(gAA_[i][0] + gBB_[i][0] + 2*gAB_[i][0]) )*partialPlusDFT[i][0]*size;
          WPlusUpdateDFT[i][0] /= size; // accounting for unnormalized fftw
-         WPlusUpdateDFT[i][1] = WPlusDFT[i][1] + dt_*partialPlusDFT[i][1];
+         WPlusUpdateDFT[i][1] = WPlusDFT[i][1] + dt_*partialPlusDFT[i][1]; // imaginary components. Im(g(k)) = 0
       }
 
       // Manually set 0th element of fourier transform to zero to set average to zero
       WPlusUpdateDFT[0][0] = 0.0; 
+      WPlusUpdateDFT[0][1] = 0.0;
 
       RField<D> WPlusUpdate;
       WPlusUpdate.allocate(meshDim);
