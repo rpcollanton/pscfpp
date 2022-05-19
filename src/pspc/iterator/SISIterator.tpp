@@ -16,7 +16,7 @@
 #include <pscf/inter/ChiInteraction.h>
 
 namespace Pscf {
-namespace Pspc{
+namespace Pspc {
 
    using namespace Util;
 
@@ -84,7 +84,12 @@ namespace Pspc{
 
       // Solve MDE for initial state and get the W fields 
       system().compute();
-      
+
+      // Do an initial stress relaxation with a high tolerance, 
+      // if the unit cell is flexible.
+      if (isFlexible_) {
+         relaxUnitCell(epsilon_/scaleStress_*100);
+      }
 
       // Iterative loop 
       bool fieldsConverged;
@@ -100,104 +105,29 @@ namespace Pspc{
          // If the fields error is low enough
          if (fieldsConverged) {
             
-            // Now that the fields are converged at these unit cell parameters, relax the
-            // unit cell parameters if the unit cell is flexible.
+            // Now that the fields are converged at for this unit cell, check the stress
+            // to verify it is low enough and optimize cell parameters if cell is flexible.
             if (isFlexible_) {
-               int nParam = system().unitCell().nParameter();
-               DArray<double> stresses;
-               stresses.allocate(nParam);
-
-               // Compute the stress
-               system().mixture().computeStress();
-
-               // Check if the stress is low enough initially
-               Log::file()<<"---------------------"<<std::endl;
-               Log::file() << "Potential fields converged. Checking Stress..." << std::endl;
-               bool stressConverged = true;
-               for (int i = 0; i < nParam; i++) {
-                  stresses[i] = system().mixture().stress(i);
-                  Log::file() << "Stress " << i <<  " = " << stresses[i] << std::endl;
-                  if (abs(scaleStress_ * stresses[i]) > epsilon_) { 
-                     stressConverged = false;
-                     break;
-                  }
-               }
-               Log::file() << std::endl;
-
-               // If stress is not low enough.. iterate the unit cell parameters using Newton-Raphson (NR).
+               
+               Log::file() << "Checking stress..." << std::endl;
+               double stressTol = epsilon_/scaleStress_;
+               bool stressConverged = isCellConverged(stressTol);
+               
                if (!stressConverged) {
-
-                  // Reset field convergence status to false upon changing parameters
-                  fieldsConverged = false;
-                  // Get current unit cell parameters
-                  FSArray<double, 6> param = system().unitCell().parameters();
-                  // Allocate matrices for the jacobian and inverse jacobian 
-                  DMatrix<double> J, Jinv;
-                  J.allocate(nParam,nParam);
-                  Jinv.allocate(nParam,nParam);
-
-                  // Iterate to solve the stress equations for the optimal unit cell parameters
-                  Log::file() << "Relaxing Unit Cell Parameters..." << std::endl;
+                  // Attempt to relax unit cell
+                  relaxUnitCell(stressTol);
                   
-                  for (int stressItr = 0; stressItr < 50; stressItr++) {
-                     Log::file()<<" Unit Cell Iteration "<<stressItr<<std::endl;
-                     for (int i = 0; i < nParam; i++) {
-                        Log::file()<<" -- Param  " << i << " = " << param[i] << std::endl;
-                        Log::file()<<" -- Stress " << i << " = " << stresses[i] << std::endl;
-                     }
-
-                     // Compute jacobian
-                     J = computeStressJacobian(param);
-
-                     // Compute the inverse jacobian
-                     if (nParam == 1) {
-                        Jinv(0,0) = 1/J(0,0);
-                     } else {
-                        LuSolver solver;
-                        solver.allocate(nParam);
-                        solver.computeLU(J);
-                        solver.inverse(Jinv);
-                     }
-
-                     // Adjust unit cell parameters with one step of NR
-                     for (int i = 0; i < nParam; i++) {
-                        for (int j = 0; j < nParam; j++) {
-                           param[i] -= Jinv(i,j)*stresses[j];
-                        }
-                     }
-                     // Update unit cell parameters on system
-                     system().setUnitCell(param);
-
-                     // Solve MDEs and recompute stress
-                     system().compute();
-                     system().mixture().computeStress();
-
-                     // Check unit cell parameter convergence
-                     stressConverged = true;
-                     for (int i = 0; i < nParam; i++) {
-                        stresses[i] = system().mixture().stress(i);
-                        if (abs(scaleStress_ * stresses[i]) > epsilon_) { 
-                           stressConverged = false;
-                           break;
-                        }
-                     }
-                     if (stressConverged) {
-                        break;
-                     }
-                  }
-                  // If the loop finishes and stress is still not converged, then the hardcoded max iters was reached.
-                  if (!stressConverged) {
-                     Log::file() << "Iterator reached maximum number of stress relaxation iterations." << std::endl;
-                     return 1;
-                  }
-
-                  // If unit cell parameters were originally not converged but now are, then 
-                  // re-solve the MDEs and go back to the outer for loop for converging 
-                  // the potential fields.
-                  evaluateScatteringFnc();
-                  Log::file()<<"\nUnit cell relaxed. Relaxing potential fields in new cell..." << std::endl;
+                  // Continue field relaxations in the new cell by returning to for loop.
+                  fieldsConverged = false;
+                  Log::file()<< "Relaxing potential fields in new cell..." << std::endl;
                   continue;
+
+               } else {
+                  for (int i = 0; i < system().unitCell().nParameter(); i++) {
+                     Log::file() << "Stress " << i <<  " = " << system().mixture().stress(i) << std::endl;
+                  }
                }
+
             }
             
             Log::file() << "----------CONVERGED----------"<< std::endl;
@@ -521,7 +451,113 @@ namespace Pspc{
    }
 
    template <int D>
-   bool SISIterator<D>::isConverged() {
+   void SISIterator<D>::relaxUnitCell(double tol)
+   {
+      int nParam = system().unitCell().nParameter();
+      DArray<double> stresses;
+      stresses.allocate(nParam);
+
+      // Compute the stress
+      system().mixture().computeStress();
+      
+      // Output current stress values.
+      Log::file()<<"---------------------"<<std::endl;
+      Log::file() << "Relaxing Unit Cell. Initial Stress:" << std::endl;
+      for (int i = 0; i < nParam; i++) {
+         stresses[i] = system().mixture().stress(i);
+         Log::file() << "Stress " << i <<  " = " << stresses[i] << std::endl;
+      }
+      Log::file() << std::endl;
+
+      // If stress is not low enough.. iterate the unit cell parameters using Newton-Raphson (NR).
+      bool stressConverged = isCellConverged(tol);
+      if (!stressConverged) {
+
+         // Get current unit cell parameters
+         FSArray<double, 6> param = system().unitCell().parameters();
+         // Allocate matrices for the jacobian and inverse jacobian 
+         DMatrix<double> J, Jinv;
+         J.allocate(nParam,nParam);
+         Jinv.allocate(nParam,nParam);
+
+         // Iterate to solve the stress equations for the optimal unit cell parameters         
+         for (int stressItr = 0; stressItr < 50; stressItr++) {
+            // Output iteration number
+            Log::file()<<" Unit Cell Iteration "<<stressItr<<std::endl;
+
+            // Compute jacobian
+            J = computeStressJacobian(param);
+
+            // Compute the inverse jacobian
+            if (nParam == 1) {
+               Jinv(0,0) = 1/J(0,0);
+            } else {
+               LuSolver solver;
+               solver.allocate(nParam);
+               solver.computeLU(J);
+               solver.inverse(Jinv);
+            }
+
+            // Adjust unit cell parameters with one step of NR
+            for (int i = 0; i < nParam; i++) {
+               for (int j = 0; j < nParam; j++) {
+                  param[i] -= Jinv(i,j)*stresses[j];
+               }
+            }
+            // Update unit cell parameters on system
+            system().setUnitCell(param);
+
+            // Solve MDEs
+            system().compute();
+
+            // Recompute stress and check unit cell parameter convergence
+            stressConverged = isCellConverged(tol);
+
+            // Update stress and output stress/unit cell information
+            for (int i = 0; i < nParam; i++) {
+               stresses[i] = system().mixture().stress(i);
+               Log::file()<<" -- Param  " << i << " = " << param[i] << std::endl;
+               Log::file()<<" -- Stress " << i << " = " << stresses[i] << std::endl;
+            }
+            
+            if (stressConverged) break;
+         }
+
+         // If the loop finishes and stress is still not converged, then the hardcoded max iters was reached.
+         if (!stressConverged) {
+            Log::file() << "Iterator reached maximum number of stress relaxation iterations." << std::endl;
+         } else {
+            Log::file() << "\nUnit cell relaxed." << std::endl;
+         }         
+         evaluateScatteringFnc();
+      }
+
+   }
+
+   template <int D>
+   bool SISIterator<D>::isCellConverged(double tol) 
+   {
+      bool stressConverged = true;
+      system().mixture().computeStress();
+      
+      int nParam = system().unitCell().nParameter();
+      DArray<double> stresses;
+      stresses.allocate(nParam);
+
+      for (int i = 0; i < nParam; i++) {
+         stresses[i] = system().mixture().stress(i);
+         if (abs(stresses[i]) > tol) { 
+            stressConverged = false;
+            break;
+         }
+      }
+
+      return stressConverged;
+   }
+
+   template <int D>
+   bool SISIterator<D>::isConverged() 
+   {
 
       double errorPlus, errorMinus, error;
 

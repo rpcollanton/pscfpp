@@ -140,11 +140,23 @@ namespace Pspc
       */
       void getWFields(DArray<RField<D>> &Wfields);
 
+
       /**
       * Compute the Jacobian of the stress in each unit cell direction 
       * as a function of the unit cell parameters. 
       */
       DMatrix<double> computeStressJacobian(FSArray<double,6> param);
+
+      /**
+      * Relax the unit cell by varying the parameters with a Newton-Raphson
+      * scheme such that the stress falls below a certain tolerance. 
+      */
+      void relaxUnitCell(double tol);
+
+      /**
+      * Checks if the unit cell has relaxed enough 
+      */
+      bool isCellConverged(double tol);
 
       /**
       * Checks if the system is converged by comparing the self-consistency
