@@ -39,6 +39,8 @@ namespace Pspc {
       read(in, "epsilon", epsilon_);
       // pseudo-time step size
       read(in, "timeStep", dt_);
+      // convergence criterion type
+      // readOptional(in, "errorType", errorType_);
       // flexible unit cell? 
       isFlexible_ = 0;
       scaleStress_ = 10;
@@ -87,12 +89,15 @@ namespace Pspc {
 
       // Do an initial stress relaxation with a high tolerance, 
       // if the unit cell is flexible.
+      double stressTol = epsilon_/scaleStress_;
       if (isFlexible_) {
-         relaxUnitCell(epsilon_/scaleStress_*100);
+         relaxUnitCell(stressTol*100);
       }
 
       // Iterative loop 
       bool fieldsConverged;
+      bool stressConverged;
+      int  stressFailed = 0;
       for (int itr = 0; itr < maxItr_; ++itr) {
          getWFields(Wfields_);
 
@@ -107,15 +112,19 @@ namespace Pspc {
             
             // Now that the fields are converged at for this unit cell, check the stress
             // to verify it is low enough and optimize cell parameters if cell is flexible.
-            if (isFlexible_) {
+            // Use counter of failed stress iterations to turn off stress iteration 
+            // when it keeps failing.
+
+            if (isFlexible_ && stressFailed < 10) {
                
                Log::file() << "Checking stress..." << std::endl;
-               double stressTol = epsilon_/scaleStress_;
-               bool stressConverged = isCellConverged(stressTol);
+               stressConverged = isCellConverged(stressTol);
                
                if (!stressConverged) {
                   // Attempt to relax unit cell
-                  relaxUnitCell(stressTol);
+                  stressConverged = relaxUnitCell(stressTol);
+                  // If this iteration reached max iterations, accumulate stress failed.
+                  if (!stressConverged) stressFailed += 1;
                   
                   // Continue field relaxations in the new cell by returning to for loop.
                   fieldsConverged = false;
@@ -452,7 +461,7 @@ namespace Pspc {
    }
 
    template <int D>
-   void SISIterator<D>::relaxUnitCell(double tol)
+   bool SISIterator<D>::relaxUnitCell(double tol)
    {
       int nParam = system().unitCell().nParameter();
       DArray<double> stresses;
@@ -531,6 +540,7 @@ namespace Pspc {
             Log::file() << "\nUnit cell relaxed." << std::endl;
          }         
          evaluateScatteringFnc();
+         return stressConverged;
       }
 
    }
@@ -585,6 +595,8 @@ namespace Pspc {
          else
             error = errorPlus;
       }
+
+      // Compute anderson mixing residual
 
       Log::file() << "Max Error (Pressure) = " << errorPlus << std::endl;
       Log::file() << "Max Error (Exchange) = " << errorMinus << std::endl;

@@ -151,7 +151,7 @@ namespace Pspc
       * Relax the unit cell by varying the parameters with a Newton-Raphson
       * scheme such that the stress falls below the inputted tolerance. 
       */
-      void relaxUnitCell(double tol);
+      bool relaxUnitCell(double tol);
 
       /**
       * Checks if the unit cell has relaxed enough such that the stress
