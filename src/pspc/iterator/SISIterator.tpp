@@ -540,8 +540,8 @@ namespace Pspc {
             Log::file() << "\nUnit cell relaxed." << std::endl;
          }         
          evaluateScatteringFnc();
-         return stressConverged;
       }
+      return stressConverged;
 
    }
 
