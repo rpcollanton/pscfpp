@@ -9,6 +9,7 @@
 */
 
 #include <util/global.h>
+#include <util/misc/Timer.h>     // for timing
 #include <math.h>                // for pow
 #include <pscf/math/LuSolver.h>  // for finding inverse jacobian
 #include "SISIterator.h"
@@ -81,18 +82,34 @@ namespace Pspc {
    template <int D>
    int SISIterator<D>::solve()
    {
+      // Timers
+      Timer timerMDE;
+      Timer timerStressRelax;
+      Timer timerPartialPlus;
+      Timer timerPartialMinus;
+      Timer timerStepPlus;
+      Timer timerStepMinus;
+      Timer timerConverged;
+      Timer timerUpdate;
+      Timer timerTotal; 
+
+      timerTotal.start();
       // Evaluate scattering functions for this reciprocal space grid
       evaluateScatteringFnc();
 
       // Solve MDE for initial state and get the W fields 
+      timerMDE.start();
       system().compute();
+      timerMDE.stop();
 
       // Do an initial stress relaxation with a high tolerance, 
       // if the unit cell is flexible.
+      timerStressRelax.start();
       double stressTol = epsilon_/scaleStress_;
       if (isFlexible_) {
          relaxUnitCell(stressTol*100);
       }
+      timerStressRelax.stop();
 
       // Iterative loop 
       bool fieldsConverged;
@@ -104,8 +121,16 @@ namespace Pspc {
          Log::file()<<"---------------------"<<std::endl;
          Log::file()<<" Iteration  "<<itr<<std::endl;
          
-         // Compute error and test it with an isConverged function
-         fieldsConverged = isConverged();
+         // Compute error (functional derivatives) and check if it is low enough with isConverged
+         timerPartialPlus.start();
+         partialDeriv_[0] = findPartialPlus();
+         timerPartialPlus.stop();
+         timerPartialMinus.start();
+         partialDeriv_[1] = findPartialMinus(Wfields_[1]);
+         timerPartialMinus.stop();
+         timerConverged.start();
+         fieldsConverged = isConverged(partialDeriv_[0],partialDeriv_[1]);
+         timerConverged.stop();
 
          // If the fields error is low enough
          if (fieldsConverged) {
@@ -117,6 +142,8 @@ namespace Pspc {
 
             if (isFlexible_ && stressFailed < 10) {
                
+               timerStressRelax.start();
+
                Log::file() << "Checking stress..." << std::endl;
                stressConverged = isCellConverged(stressTol);
                
@@ -129,6 +156,7 @@ namespace Pspc {
                   // Continue field relaxations in the new cell by returning to for loop.
                   fieldsConverged = false;
                   Log::file()<< "Relaxing potential fields in new cell..." << std::endl;
+                  timerStressRelax.stop();
                   continue;
 
                } else {
@@ -136,10 +164,44 @@ namespace Pspc {
                      Log::file() << "Stress " << i <<  " = " << system().mixture().stress(i) << std::endl;
                   }
                }
+               timerStressRelax.stop();
 
             }
+            timerTotal.stop();
             
             Log::file() << "----------CONVERGED----------"<< std::endl;
+
+            // Output timing results
+            Log::file() << "\n";
+            Log::file() << "Iterator times contributions:\n";
+            Log::file() << "\n";
+            Log::file() << "MDE solution:         " 
+                        << timerMDE.time()  << " s,  "
+                        << timerMDE.time()/timerTotal.time() << "\n";
+            Log::file() << "Stress relaxation:         " 
+                        << timerStressRelax.time()  << " s,  "
+                        << timerStressRelax.time()/timerTotal.time() << "\n";
+            Log::file() << "partial plus computation: "  
+                        << timerPartialPlus.time()  << " s,  "
+                        << timerPartialPlus.time()/timerTotal.time() << "\n";
+            Log::file() << "partial minus computation:  "  
+                        << timerPartialMinus.time()  << " s,  "
+                        << timerPartialMinus.time()/timerTotal.time() << "\n";
+            Log::file() << "stepping plus field:  "  
+                        << timerStepPlus.time()  << " s,  "
+                        << timerStepPlus.time()/timerTotal.time() << "\n";
+            Log::file() << "stepping minus field:  "  
+                        << timerStepMinus.time()  << " s,  "
+                        << timerStepMinus.time()/timerTotal.time() << "\n";
+            Log::file() << "checking convergence: "  
+                        << timerConverged.time()  << " s,  "
+                        << timerConverged.time()/timerTotal.time() << "\n";
+            Log::file() << "updating system fields:       "  
+                        << timerUpdate.time()  << " s,  "
+                        << timerUpdate.time()/timerTotal.time() << "\n";
+            Log::file() << "total time:           "  
+                        << timerTotal.time()   << " s  ";
+            Log::file() << "\n\n";
             return 0;
 
          } else {
@@ -150,33 +212,46 @@ namespace Pspc {
             // "findPartial" function that depends only on the coefficient matrix to 
             // transfrom from one set of fields to another
 
-            // Find the functional derivative with respect to W+ 
-            partialDeriv_[0] = findPartialPlus();
-            
+            // Functional derivative with respect to W+ already found above
             // Solve the first semi-implicit equation for W+ (j+1/2)
-            Wfields_[0] = stepWPlus(Wfields_[0], partialDeriv_[0]);
+            timerStepPlus.start();
+            stepWPlus(Wfields_[0], partialDeriv_[0]);
+            timerStepPlus.stop();
 
             // Update system with these updated fields and re-solve MDEs
+            timerUpdate.start();
             updateSystemFields(Wfields_);
+            timerUpdate.stop();
+            timerMDE.start();
             system().compute();
+            timerMDE.stop();
 
             // Find the functional derivative with respect to W-.
+            timerPartialMinus.start();
             partialDeriv_[1] = findPartialMinus(Wfields_[1]);
+            timerPartialMinus.stop();
 
             // Solve the second semi-implicit equation for W- (j+1/2)
-            Wfields_[1] = stepWMinus(Wfields_[1], partialDeriv_[1]);
+            timerStepMinus.start();
+            stepWMinus(Wfields_[1], partialDeriv_[1]);
+            timerStepMinus.stop();
 
             // Complete the full step by shifting the spatial average to zero
             shiftAverageZero(Wfields_);
 
             // Update system and solve MDEs
+            timerUpdate.start();
             updateSystemFields(Wfields_);
+            timerUpdate.stop();
+            timerMDE.start();
             system().compute();
+            timerMDE.stop();
          }
 
       }
 
       // Failure: iteration counter itr reached maxItr without converging
+      timerTotal.stop();
       Log::file() << "Iterator failed to converge before the maximum number of iterations.\n";
       return 1;
 
@@ -326,7 +401,7 @@ namespace Pspc {
    }
 
    template <int D>
-   RField<D> SISIterator<D>::stepWPlus(const RField<D> & WPlus, const RField<D> & partialPlus)
+   void SISIterator<D>::stepWPlus(RField<D> & WPlus, const RField<D> & partialPlus)
    {
       // do FFT, solve in fourier space, FFT-inverse back
 
@@ -366,29 +441,22 @@ namespace Pspc {
       WPlusUpdateDFT[0][0] = 0.0; 
       WPlusUpdateDFT[0][1] = 0.0;
 
-      RField<D> WPlusUpdate;
-      WPlusUpdate.allocate(meshDim);
-      system().fft().inverseTransform(WPlusUpdateDFT,WPlusUpdate);
-
-      return WPlusUpdate;
+    
+      system().fft().inverseTransform(WPlusUpdateDFT,WPlus);
+      return;
    }
 
    template <int D>
-   RField<D> SISIterator<D>::stepWMinus(const RField<D> & WMinus, const RField<D> & partialMinus)
+   void SISIterator<D>::stepWMinus(RField<D> & WMinus, const RField<D> & partialMinus)
    {
       // solve algebraically
-      const IntVec<D> meshDim = system().mesh().dimensions();
       const double chiN = system().interaction().chi(0,1); //* system().mixture().polymer(0).length();
 
-
-      RField<D> WMinusUpdate;
-      WMinusUpdate.allocate(meshDim);
-
-      for (int i = 0; i < WMinusUpdate.capacity(); i++) {
-         WMinusUpdate[i] = WMinus[i] - dt_/(1 + dt_*2/chiN) * partialMinus[i];
+      for (int i = 0; i < WMinus.capacity(); i++) {
+         WMinus[i] = WMinus[i] - dt_/(1 + dt_*2/chiN) * partialMinus[i];
       }
       
-      return WMinusUpdate;
+      return;
    }
 
    template <int D>
@@ -567,16 +635,10 @@ namespace Pspc {
    }
 
    template <int D>
-   bool SISIterator<D>::isConverged() 
+   bool SISIterator<D>::isConverged(const RField<D> & partialPlus, const RField<D> & partialMinus) 
    {
 
       double errorPlus, errorMinus, error;
-
-      // Compute partial functional derivatives. Note: may be able to 
-      // simplify this and do it fewer places! (they are already being computed
-      // at each step of the algorithm...)
-      RField<D> partialPlus = findPartialPlus();
-      RField<D> partialMinus = findPartialMinus(Wfields_[1]);
 
       // These should be zero if converged. Assess how close they are
       // to zero, depending on error type.

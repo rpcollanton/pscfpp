@@ -127,12 +127,12 @@ namespace Pspc
       /**
       * Solve the semi-implicit equation for the next half-step of W+.
       */
-      RField<D> stepWPlus(const RField<D> &WPlus, const RField<D> &partialPlus);
+      void stepWPlus(RField<D> &WPlus, const RField<D> &partialPlus);
 
       /**
       * Solve the semi-implicit equation for the next half-step of W+.
       */
-      RField<D> stepWMinus(const RField<D> &WMinus, const RField<D> &partialMinus);
+      void stepWMinus( RField<D> &WMinus, const RField<D> &partialMinus);
 
       /**
       * Get the current W fields on the system, and convert W_A and W_B
@@ -164,7 +164,7 @@ namespace Pspc
       * equations via taking the partial functional derivatives with respect
       * to W+/-.
       */
-      bool isConverged();
+      bool isConverged(const RField<D> & partialPlus, const RField<D> & partialMinus);
 
       /**
       * Update the W fields on the associated system object
