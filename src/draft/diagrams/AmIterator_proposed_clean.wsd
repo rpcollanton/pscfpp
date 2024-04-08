@@ -1,0 +1,93 @@
+@startuml
+
+namespace Pscf {
+   abstract class AbstractSystem
+   abstract class Iterator<T>
+   class AmIterator<T>
+   abstract class IteratorMediator<T>
+   abstract class AmStrategy<T>
+}
+
+namespace Pspc {
+   class System
+   class IteratorFactory
+   class AmStrategyCPU
+   class IteratorMediatorCPU
+}
+
+namespace Pspg {
+   class System
+   class IteratorFactory
+   class AmStrategyCUDA
+   class IteratorMediatorCUDA
+}
+
+' Pscf.AmStrategy : + AmStrategy() {};
+' Pscf.AmStrategy : + virtual ~AmStrategy() {};       
+' Pscf.AmStrategy : + virtual findNorm()
+' Pscf.AmStrategy : + virtual findMaxAbs()
+' Pscf.AmStrategy : + virtual updateBasis()
+' Pscf.AmStrategy : + virtual computeUDotProd()
+' Pscf.AmStrategy : + virtual computeVDotProd()
+' Pscf.AmStrategy : + virtual updateU()
+' Pscf.AmStrategy : + virtual updateV()
+' Pscf.AmStrategy : + virtual setEqual()
+' Pscf.AmStrategy : + virtual addHistories()
+' Pscf.AmStrategy : + virtual addPredictedError()
+
+' Pscf.IteratorMediator : IteratorMediator() {};
+' Pscf.IteratorMediator : virtual ~IteratorMediator() {}; 
+' Pscf.IteratorMediator : virtual setIterator()
+' Pscf.IteratorMediator : virtual setup()
+' Pscf.IteratorMediator : virtual solve()
+' Pscf.IteratorMediator : virtual hasInitialGuess() 
+' Pscf.IteratorMediator : virtual nElements()
+' Pscf.IteratorMediator : virtual getCurrent()
+' Pscf.IteratorMediator : virtual evaluate()
+' Pscf.IteratorMediator : virtual getResidual()
+' Pscf.IteratorMediator : virtual update()
+
+
+' Pscf.IteratorMediator : - Iterator* iter_
+' Pscf.IteratorMediator : - AbstractSystem* sys_
+
+' Pspc.System : - IteratorMediatorCPU<D>* iterMed_
+' Pspg.System : - IteratorMediatorCUDA<D>* iterMed_
+
+
+' Pscf.Iterator : + Iterator(IteratorMediator& iterMed)
+' Pscf.Iterator : # IteratorMediator& iterMed()
+' Pscf.Iterator : - IteratorMediator* iterMed_
+
+' Pscf.AmIterator : + AmIterator(IteratorMediator<T>& iterMed, AmStrategy<T>& strategy)
+' Pscf.AmIterator : AmStrategy<T>* strategy_
+
+
+
+' Inheritance and subclassing 
+Pscf.AbstractSystem <|--- Pspc.System
+Pscf.AbstractSystem <|--- Pspg.System
+Pscf.Iterator <|-- Pscf.AmIterator
+Pscf.IteratorMediator <|-- Pspc.IteratorMediatorCPU : T = FieldCPU
+Pscf.AmStrategy <|-- Pspc.AmStrategyCPU : T = FieldCPU
+Pscf.IteratorMediator <|-- Pspg.IteratorMediatorCUDA : T = FieldGPU
+Pscf.AmStrategy <|-- Pspg.AmStrategyCUDA : T = FieldGPU
+
+' References
+Pscf.Iterator --> Pscf.IteratorMediator
+Pscf.IteratorMediator --> Pscf.AbstractSystem
+
+' Composition
+Pscf.IteratorMediator *-> Pscf.Iterator
+Pscf.AmIterator *-> Pscf.AmStrategy
+Pspc.System *--> Pspc.IteratorMediatorCPU
+Pspc.System *--> Pspc.IteratorFactory
+Pspg.System *--> Pspg.IteratorMediatorCUDA
+Pspg.System *--> Pspg.IteratorFactory 
+
+' Creates
+Pspc.IteratorFactory ..> Pscf.AmIterator
+Pspg.IteratorFactory ..> Pscf.AmIterator
+
+
+@enduml

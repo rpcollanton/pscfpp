@@ -1,0 +1,30 @@
+@startuml
+
+namespace Pspc {
+   class System
+   class IteratorFactory
+   class Iterator
+   class AmIterator
+}
+
+namespace Pspg {
+   class System
+   class IteratorFactory
+   class Iterator
+   class AmIterator
+}
+
+Pspg.Iterator <|-- Pspg.AmIterator
+Pspg.Iterator --> Pspg.System
+Pspg.IteratorFactory..>Pspg.AmIterator
+Pspg.System *-l-> Pspg.IteratorFactory 
+Pspg.System *-> Pspg.Iterator
+
+Pspc.Iterator <|-- Pspc.AmIterator
+Pspc.Iterator --> Pspc.System
+Pspc.IteratorFactory..>Pspc.AmIterator
+Pspc.System *-l-> Pspc.IteratorFactory 
+Pspc.System *-> Pspc.Iterator
+
+
+@enduml

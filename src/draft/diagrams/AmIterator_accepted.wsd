@@ -1,0 +1,52 @@
+@startuml
+
+namespace Pscf {
+   class AmIteratorTmpl<Iterator,T>
+}
+
+namespace Pspc {
+   class System
+   class IteratorFactory
+   class Iterator
+   class AmIterator
+}
+
+namespace Pspg {
+   class System
+   class Iterator
+   class IteratorFactory
+   class AmIterator
+}
+
+' Inheritance and subclassing 
+' Pscf.AmIteratorTmpl <|-u--Pspc.AmIterator : Iterator = Pspc::Iterator\nT = FieldCPU
+' Pspc.Iterator <|-d- Pscf.AmIteratorTmpl : Iterator = Pspc::Iterator
+
+' Pspg.Iterator <|-d- Pscf.AmIteratorTmpl : Iterator = Pspg::Iterator
+' Pscf.AmIteratorTmpl <|-u- Pspg.AmIterator : Iterator = Pspg::Iterator\nT = FieldGPU
+
+
+' References
+Pspc.Iterator --> Pspc.System
+Pspg.Iterator --> Pspg.System
+
+' Composition
+Pspc.System *-r-> Pspc.Iterator
+Pspc.System *-l-> Pspc.IteratorFactory
+
+Pspg.System *-r-> Pspg.IteratorFactory 
+Pspg.System *-l-> Pspg.Iterator
+
+' Creates
+Pspc.IteratorFactory ..> Pspc.AmIterator
+Pspg.IteratorFactory ..> Pspg.AmIterator
+
+' Inheritance and subclassing 
+Pscf.AmIteratorTmpl <|-u- Pspc.AmIterator : Iterator = Pspc::Iterator\nT = FieldCPU
+Pspc.Iterator <|-u- Pscf.AmIteratorTmpl : Iterator = Pspc::Iterator
+
+Pspg.Iterator <|- Pscf.AmIteratorTmpl : Iterator = Pspg::Iterator
+Pscf.AmIteratorTmpl <|- Pspg.AmIterator : Iterator = Pspg::Iterator\nT = FieldGPU
+
+
+@enduml
